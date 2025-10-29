@@ -1,0 +1,857 @@
+<!--
+  Version revisitée du simulateur d'optimisation fiscale. Cette édition adopte
+  une esthétique sombre et minimaliste, avec une structure en deux colonnes
+  pour séparer les entrées et les résultats. Les couleurs et la typographie
+  diffèrent nettement de la précédente version pastel. Le pied de page
+  référence toujours Mohamed Aziz Jaouadi avec un nouveau numéro de téléphone.
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Mise à jour du titre pour refléter le nouveau périmètre (CEA) -->
+  <title>Simulateur Assurance Vie et Compte Epargne en Action (CEA)</title>
+  <!-- Icônes FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-dRynbq1+Dds4wGmWVF3hDtPV3Mf38hB+bOWvCmVcdPYqQUUcNcx1Cjt4fyov6BbZkp8hRrwW4fO4Yn06suqO2w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    /* Thème sombre et couleurs de base */
+    :root {
+      --background: #0f172a;       /* Couleur d'arrière-plan principale */
+      --surface: #1e293b;          /* Couleur des surfaces (cartes, footer) */
+      --surface-light: #334155;    /* Variante plus claire pour le container */
+      /* Couleurs primaires bleues pour remplacer le violet */
+      --primary: #3b82f6;          /* Bleu pour les éléments interactifs */
+      --primary-dark: #1d4ed8;
+      --secondary: #22c55e;        /* Vert doux pour les indicateurs */
+      --accent: #fbbf24;           /* Jaune pour attirer l'œil */
+      /* Couleur du titre, définie à un orange chaud */
+      --title-color: #f97316;
+      --text: #f1f5f9;             /* Texte principal clair */
+      --muted: #94a3b8;            /* Texte secondaire/gris */
+      --border: #475569;           /* Couleur des bordures */
+      --radius: 12px;
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--background);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: var(--surface-light);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    header {
+      text-align: left;
+      margin-bottom: 2rem;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 1rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      /* Utiliser la couleur du titre personnalisée pour l'en-tête */
+      color: var(--title-color);
+    }
+
+    header p {
+      margin-top: 0.5rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    .left-panel,
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.35);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .card-title i {
+      color: var(--primary);
+      font-size: 1.2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      font-size: 0.9rem;
+    }
+
+    label i {
+      margin-right: 0.4rem;
+      color: var(--primary);
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-light);
+      color: var(--text);
+      font-size: 0.95rem;
+      transition: var(--transition);
+    }
+
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .radio-group input {
+      margin-right: 0.4rem;
+    }
+
+    .info-card {
+      /* Couleur de fond blanche pour la suggestion optimale. L'écriture reste lisible grâce à la couleur de texte sombre. */
+      background: #ffffff;
+      /* Bordure colorée : bleu à gauche, rouge à droite */
+      border-left: 4px solid var(--primary);
+      border-right: 4px solid #ef4444;
+      padding: 1rem;
+      border-radius: var(--radius);
+      /* Texte sombre pour contraste sur fond clair */
+      color: var(--background);
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .info-card:hover {
+      transform: scale(1.03);
+    }
+
+    .info-card.active {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    }
+
+    .info-card h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .info-card p {
+      /* Texte en noir (ou sombre) pour assurer une bonne lisibilité sur fond clair */
+      font-size: 0.85rem;
+      color: var(--background);
+    }
+
+    /* Le montant conseillé dans la carte de suggestion est en vert pour se démarquer */
+    #optimal-recommendation {
+      color: var(--secondary);
+      font-weight: 600;
+    }
+
+    .btn {
+      padding: 0.8rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary {
+      /* Bouton principal en rouge */
+      background: #ef4444;
+      color: var(--text);
+    }
+
+    .btn-primary:hover {
+      /* Ton plus sombre au survol du bouton rouge */
+      background: #dc2626;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+    }
+
+    .results-section h3 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .results-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .result-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .result-item span:first-child {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .result-item span:last-child {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .result-item.highlight span:last-child {
+      color: var(--secondary);
+    }
+
+    /* Appliquer la couleur de mise en évidence directement sur le span marqué highlight */
+    .result-item span.highlight {
+      color: var(--secondary);
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 0.8rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .comparison-table th {
+      /* Entêtes du tableau en jaune pour une meilleure lisibilité */
+      background: var(--accent);
+      color: var(--background);
+      font-weight: 600;
+      text-align: left;
+    }
+
+    .comparison-table tr:nth-child(even) {
+      background: var(--surface-light);
+    }
+
+    /* Cellule d'impact affichant les économies de taxe avec une teinte verte
+       pour mettre en valeur la réduction d'impôt. */
+    .impact-cell {
+      color: var(--secondary);
+      font-weight: 600;
+    }
+
+    .footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .footer a {
+      color: var(--primary);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 900px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <!-- Nouveau titre et sous-titre pour indiquer le simulateur CEA -->
+      <h1>Simulateur Assurance Vie et Compte Epargne en Action (CEA)</h1>
+      <p>Calculez et optimisez votre impôt en quelques clics grâce à notre outil.</p>
+    </header>
+
+    <div class="main-layout">
+      <!-- Colonne gauche avec les champs de saisie -->
+      <div class="left-panel">
+        <div class="card">
+          <div class="card-title">
+            <i class="fas fa-user"></i>
+            Situation familiale
+          </div>
+          <div class="form-group">
+            <label for="revenue"><i class="fas fa-money-bill-wave"></i> Revenu brut imposable (TND)</label>
+            <input type="number" id="revenue" value="0" min="0" step="1000" />
+          </div>
+          <div class="form-group">
+            <label><i class="fas fa-home"></i> Chef de famille</label>
+            <div class="radio-group">
+              <label><input type="radio" id="head-family-yes" name="head-family" value="yes" checked /> Oui</label>
+              <label><input type="radio" id="head-family-no" name="head-family" value="no" /> Non</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="children"><i class="fas fa-baby"></i> Enfants à charge (moins de 20 ans)</label>
+            <input type="number" id="children" value="0" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="disabled-children"><i class="fas fa-wheelchair"></i> Enfants infirmes</label>
+            <input type="number" id="disabled-children" value="0" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="students"><i class="fas fa-graduation-cap"></i> Étudiants sans bourse</label>
+            <input type="number" id="students" value="0" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="parents"><i class="fas fa-users"></i> Parents à charge (max 2)</label>
+            <input type="number" id="parents" value="0" min="0" max="2" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <i class="fas fa-chart-line"></i>
+            Investissement
+          </div>
+          <!-- Fractionnement (Mensuel, Trimestriel, Semestriel, Annuel) -->
+          <div class="form-group">
+            <label for="investment-frequency"><i class="fas fa-calendar-alt"></i> Fractionnement</label>
+            <select id="investment-frequency">
+              <option value="Mensuel">Mensuel</option>
+              <option value="Trimestriel">Trimestriel</option>
+              <option value="Semestriel">Semestriel</option>
+              <option value="Annuel">Annuel</option>
+            </select>
+          </div>
+          <!-- Montant à investir par période -->
+          <div class="form-group">
+            <label for="investment-amount-period"><i class="fas fa-coins"></i> Montant à investir (TND)</label>
+            <input type="number" id="investment-amount-period" value="0" min="0" step="100" />
+          </div>
+          <!-- Montant total calculé en fonction du fractionnement -->
+          <div class="form-group">
+            <label for="investment-amount-total"><i class="fas fa-coins"></i> Montant Total à investir (TND)</label>
+            <input type="number" id="investment-amount-total" value="0" min="0" step="100" readonly />
+          </div>
+          <div class="info-card" id="info-card">
+            <h4><i class="fas fa-lightbulb"></i> Suggestion optimale</h4>
+            <p id="optimal-recommendation">-</p>
+            <p>Investissez ce montant pour réduire votre impôt au plancher légal (45 %).</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Colonne droite avec l'affichage des résultats -->
+      <div class="right-panel">
+        <div class="results-section" id="results-section">
+          <h3><i class="fas fa-chart-pie"></i> Résultats</h3>
+          <div class="results-group">
+            <div class="result-item">
+              <span>Impôt total avant investissement</span>
+              <span id="tax-before">0 TND</span>
+            </div>
+            <div class="result-item">
+              <!-- Libellé précisant que l'impôt correspond à la situation après investissement -->
+              <span>Impôt total après investissement</span>
+              <span id="tax-after">0 TND</span>
+            </div>
+            <div class="result-item">
+              <span>Économie d'impôt</span>
+              <span id="tax-saved" class="highlight">0 TND</span>
+            </div>
+            <div class="result-item">
+              <span>Économie d'impôt mensuel</span>
+              <span id="tax-saved-monthly">0 TND</span>
+            </div>
+            <div class="result-item">
+              <!-- Taux de réduction d'impôt -->
+              <span>Taux de réduction d'impôt</span>
+              <span id="tax-reduction-rate">0 %</span>
+            </div>
+            <div class="result-item">
+              <!-- Minimum d'impôt -->
+              <span>Minimum d'impôt</span>
+              <span id="min-tax">0 TND</span>
+            </div>
+            <div class="result-item">
+              <span>Montant optimal</span>
+              <span id="optimal-investment">0 TND</span>
+            </div>
+          </div>
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Tranche (TND)</th>
+                <th>Taux</th>
+                <th>Impôt sans inv.</th>
+                <th>Impôt avec inv.</th>
+                <th>Économie</th>
+              </tr>
+            </thead>
+            <tbody id="tax-brackets-comparison">
+              <!-- Lignes ajoutées par script -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>
+        ©
+        <a href="https://www.linkedin.com/in/mohamed-aziz-jaouadi-%C2%AEpsm-i-%C2%AEpspo-l-%C2%AEistqb-851009115/" target="_blank">Mohamed Aziz Jaouadi</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Helper: format a number with thousands separator (space) and 3 decimal places
+    function formatAmount(num) {
+      const parts = num.toFixed(3).split('.');
+      // Ajout d'espaces comme séparateurs de milliers
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      return parts.join('.');
+    }
+
+    // Helper: format an integer with thousand separators and no decimals.
+    function formatInteger(num) {
+      // Cast to number and remove decimals
+      const n = Math.floor(num);
+      // Convert to string and insert spaces every three digits
+      return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+    /* Barème progressif avec bornes explicites (min/max).
+       Chaque tranche est définie par un minimum inclusif et un maximum inclusif.
+       Les montants sont exprimés en TND. */
+    const taxBrackets = [
+      { min: 0,     max: 5000,  rate: 0.00 },
+      { min: 5001,  max: 10000, rate: 0.15 },
+      { min: 10001, max: 20000, rate: 0.25 },
+      { min: 20001, max: 30000, rate: 0.30 },
+      { min: 30001, max: 40000, rate: 0.33 },
+      { min: 40001, max: 50000, rate: 0.36 },
+      { min: 50001, max: 70000, rate: 0.38 },
+      { min: 70001, max: Infinity, rate: 0.40 },
+    ];
+
+    /**
+     * Calcule les déductions selon la méthodologie officielle.
+     * Frais professionnels : 10 % du revenu brut, plafonné à 2 000 TND.
+     * Chef de famille : 300 TND.
+     * Enfants à charge : 100 TND par enfant, plafonné à 400 TND.
+     * Enfants infirmes : 2 000 TND par enfant.
+     * Étudiants sans bourse : 1 000 TND par étudiant, plafonné à 4 000 TND.
+     * Parents à charge : 450 TND par parent.
+     */
+    function calculateDeductions(revenue, isHeadOfFamily, children, disabledChildren, students, parents) {
+      const professionalExpenses = Math.min(0.1 * revenue, 2000);
+      const headOfFamilyDeduction = isHeadOfFamily ? 300 : 0;
+      const childrenDeduction = Math.min(children * 100, 400);
+      const disabledChildrenDeduction = disabledChildren * 2000;
+      const studentsDeduction = Math.min(students * 1000, 4000);
+      const parentsDeduction = parents * 450;
+      return professionalExpenses + headOfFamilyDeduction + childrenDeduction + disabledChildrenDeduction + studentsDeduction + parentsDeduction;
+    }
+
+    /**
+     * Calcule l'impôt détaillé pour un revenu net donné.
+     * Utilise des tranches définies par un minimum inclusif et un maximum inclusif.
+     * Pour chaque tranche, on détermine la part du revenu restant à imposer dans l'intervalle.
+     * La fonction renvoie le total de l'impôt et le détail par tranche.
+     */
+    function calculateDetailedTax(netIncome) {
+      let remainingIncome = Math.max(netIncome, 0);
+      let totalTax = 0;
+      const bracketDetails = [];
+      for (const bracket of taxBrackets) {
+        // Si aucun revenu ne reste à imposer, ajouter des tranches vides
+        if (remainingIncome <= 0) {
+          bracketDetails.push({
+            min: bracket.min,
+            max: bracket.max,
+            rate: bracket.rate,
+            amount: 0,
+            tax: 0,
+          });
+          continue;
+        }
+        // Largeur de la tranche (Infini si max est Infinity)
+        const rangeWidth =
+          bracket.max === Infinity ? Infinity : bracket.max - bracket.min;
+        // Montant imposable dans la tranche : le minimum entre le revenu restant et la largeur de la tranche
+        const taxableAmount = Math.min(
+          remainingIncome,
+          rangeWidth === Infinity ? remainingIncome : rangeWidth
+        );
+        const taxForBracket = taxableAmount * bracket.rate;
+        totalTax += taxForBracket;
+        remainingIncome -= taxableAmount;
+        bracketDetails.push({
+          min: bracket.min,
+          max: bracket.max,
+          rate: bracket.rate,
+          amount: taxableAmount,
+          tax: taxForBracket,
+        });
+      }
+      return { total: totalTax, byBracket: bracketDetails };
+    }
+
+    /**
+     * Applique le minimum d'impôt (45 % de l'impôt initial) en répartissant la charge
+     * sur les différentes tranches selon leur capacité maximale.
+     * Si l'impôt calculé dépasse le minimum, les détails initiaux sont renvoyés.
+     */
+    function applyMinTax(taxDetails, minTax) {
+      if (taxDetails.total >= minTax) {
+        return taxDetails;
+      }
+      // Calcul de l'espace disponible (largeur) pour chaque tranche
+      const availableSpace = taxBrackets.map((br) =>
+        br.max === Infinity ? Infinity : br.max - br.min
+      );
+      let remainingTax = minTax;
+      const adjusted = { total: 0, byBracket: [] };
+      for (let i = 0; i < taxBrackets.length; i++) {
+        const bracket = taxBrackets[i];
+        const width = availableSpace[i];
+        // Capacité maximale d'impôt que cette tranche peut absorber
+        const maxPossibleTax =
+          width === Infinity ? Infinity : width * bracket.rate;
+        const taxForBracket = Math.min(remainingTax, maxPossibleTax);
+        const amount = bracket.rate > 0 ? taxForBracket / bracket.rate : 0;
+        adjusted.byBracket.push({
+          min: bracket.min,
+          max: bracket.max,
+          rate: bracket.rate,
+          amount: amount,
+          tax: taxForBracket,
+        });
+        adjusted.total += taxForBracket;
+        remainingTax -= taxForBracket;
+        if (remainingTax <= 0) {
+          // Compléter les tranches restantes avec des montants nuls
+          for (let j = i + 1; j < taxBrackets.length; j++) {
+            const b = taxBrackets[j];
+            adjusted.byBracket.push({
+              min: b.min,
+              max: b.max,
+              rate: b.rate,
+              amount: 0,
+              tax: 0,
+            });
+          }
+          break;
+        }
+      }
+      // S'il reste du montant à répartir (normalement uniquement sur la dernière tranche infinie)
+      if (remainingTax > 0) {
+        const last = adjusted.byBracket[adjusted.byBracket.length - 1];
+        last.tax += remainingTax;
+        if (last.rate > 0) {
+          last.amount += remainingTax / last.rate;
+        }
+        adjusted.total += remainingTax;
+      }
+      return adjusted;
+    }
+
+    /**
+     * Calcule l'investissement optimal pour réduire l'impôt au niveau du minimum légal (45 %).
+     * L'algorithme parcourt les tranches jusqu'à ce que le montant d'impôt restant atteigne le plancher.
+     */
+    function findOptimalInvestment(initialNetIncome, initialTax) {
+      // Pas d'investissement optimal si le revenu net est inférieur ou égal à 5 000 TND
+      if (initialNetIncome <= 5000) {
+        return { optimalInvestment: 0, netIncomeAfter: initialNetIncome, taxAfter: initialTax };
+      }
+      const minTax = 0.45 * initialTax;
+      let netIncomeAfter = 0;
+      let remainingTax = minTax;
+      for (const bracket of taxBrackets) {
+        const width = bracket.max === Infinity ? Infinity : bracket.max - bracket.min;
+        const maxTaxInBracket =
+          width === Infinity ? Infinity : width * bracket.rate;
+        if (remainingTax <= maxTaxInBracket) {
+          // La tranche en cours suffit pour atteindre le minimum d'impôt
+          netIncomeAfter += bracket.rate > 0 ? remainingTax / bracket.rate : 0;
+          remainingTax = 0;
+          break;
+        } else {
+          // On consomme entièrement la tranche et continue sur la suivante
+          netIncomeAfter += width;
+          remainingTax -= maxTaxInBracket;
+        }
+      }
+      const optimalInvestment = Math.min(
+        initialNetIncome - netIncomeAfter,
+        initialNetIncome
+      );
+      return { optimalInvestment, netIncomeAfter, taxAfter: minTax };
+    }
+
+    function updateComparisonTable(beforeDetails, afterDetails) {
+      const tbody = document.getElementById('tax-brackets-comparison');
+      tbody.innerHTML = '';
+      for (let i = 0; i < beforeDetails.byBracket.length; i++) {
+        const bd = beforeDetails.byBracket[i];
+        const ad = afterDetails.byBracket[i] || { tax: 0 };
+        // Formater les bornes avec séparateurs de milliers et sans décimales.
+        // Les bornes min et max sont déjà définies dans taxBrackets (min inclusif, max inclusif).
+        const minDisplay = formatInteger(bd.min);
+        const maxDisplay = bd.max === Infinity ? '∞' : formatInteger(bd.max);
+        const savings = bd.tax - ad.tax;
+        // Appliquer une classe uniquement si l'économie est positive
+        const impactClass = savings > 0 ? 'impact-cell' : '';
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${minDisplay} – ${maxDisplay}</td>
+          <td>${(bd.rate * 100).toFixed(0)} %</td>
+          <td>${formatAmount(bd.tax)} TND</td>
+          <td>${formatAmount(ad.tax)} TND</td>
+          <td class="${impactClass}">${formatAmount(savings)} TND</td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    function displayResults(beforeTax, afterTax, taxSaved, optimalInvestment) {
+      document.getElementById('tax-before').textContent = formatAmount(beforeTax) + ' TND';
+      document.getElementById('tax-after').textContent = formatAmount(afterTax) + ' TND';
+      // Met à jour l'économie d'impôt et applique la mise en évidence seulement si elle est positive
+      const taxSavedEl = document.getElementById('tax-saved');
+      taxSavedEl.textContent = formatAmount(taxSaved) + ' TND';
+      if (taxSaved > 0) {
+        // Gain positif : utiliser la couleur verte définie dans les variables CSS
+        taxSavedEl.classList.add('highlight');
+        taxSavedEl.style.color = getComputedStyle(document.documentElement).getPropertyValue('--secondary');
+      } else {
+        // Gain nul ou négatif : retirer la classe highlight et rétablir la couleur du texte principal
+        taxSavedEl.classList.remove('highlight');
+        taxSavedEl.style.color = getComputedStyle(document.documentElement).getPropertyValue('--text');
+      }
+
+      // Calcule l'économie d'impôt mensuelle (sur 12) et met à jour son affichage
+      const monthlySaved = taxSaved / 12;
+      const taxSavedMonthlyEl = document.getElementById('tax-saved-monthly');
+      if (taxSavedMonthlyEl) {
+        taxSavedMonthlyEl.textContent = formatAmount(monthlySaved) + ' TND';
+        if (monthlySaved > 0) {
+          taxSavedMonthlyEl.style.color = getComputedStyle(document.documentElement).getPropertyValue('--secondary');
+        } else {
+          taxSavedMonthlyEl.style.color = getComputedStyle(document.documentElement).getPropertyValue('--text');
+        }
+      }
+      // Calcul du taux de réduction d'impôt : pourcentage d'économie par rapport à l'impôt initial
+      const reductionRate = beforeTax > 0 ? (taxSaved / beforeTax * 100) : 0;
+      const taxReductionEl = document.getElementById('tax-reduction-rate');
+      taxReductionEl.textContent = reductionRate.toFixed(1) + '\u00a0%';
+      // Afficher le taux de réduction en vert
+      taxReductionEl.style.color = getComputedStyle(document.documentElement).getPropertyValue('--secondary');
+      // Calcul du minimum d'impôt (plancher à 45 % de l'impôt initial)
+      const minimumTax = beforeTax * 0.45;
+      document.getElementById('min-tax').textContent = formatAmount(minimumTax) + ' TND';
+      // Mettre à jour l'investissement optimal formaté
+      document.getElementById('optimal-investment').textContent = formatAmount(optimalInvestment) + ' TND';
+    }
+
+    function updateOptimalRecommendation(optimalInvestment) {
+      const rec = document.getElementById('optimal-recommendation');
+      if (optimalInvestment > 0) {
+        rec.textContent = formatAmount(optimalInvestment) + ' TND';
+      } else {
+        rec.textContent = '-';
+      }
+    }
+
+    const revenueInput = document.getElementById('revenue');
+    const headFamilyYes = document.getElementById('head-family-yes');
+    const childrenInput = document.getElementById('children');
+    const disabledChildrenInput = document.getElementById('disabled-children');
+    const studentsInput = document.getElementById('students');
+    const parentsInput = document.getElementById('parents');
+    // Champs pour l'investissement : montant par période, total et fractionnement
+    const investmentPeriodInput = document.getElementById('investment-amount-period');
+    const investmentTotalInput = document.getElementById('investment-amount-total');
+    const frequencyInput = document.getElementById('investment-frequency');
+
+    // Met à jour le montant total à investir en fonction du fractionnement et de la valeur par période
+    function updateTotalInvestment() {
+      const period = parseFloat(investmentPeriodInput.value) || 0;
+      const freq = frequencyInput.value;
+      let factor = 1;
+      switch (freq) {
+        case 'Mensuel':
+          // Mensuel : 12 versements par an
+          factor = 12;
+          break;
+        case 'Trimestriel':
+          factor = 4;
+          break;
+        case 'Semestriel':
+          factor = 2;
+          break;
+        case 'Annuel':
+          // Annuel : un seul versement
+          factor = 1;
+          break;
+      }
+      const total = period * factor;
+      // Mettre à jour le champ total directement sans formatage afin de conserver un nombre brut
+      investmentTotalInput.value = total;
+      // Recalculer les résultats après mise à jour
+      calculateAndDisplay();
+    }
+
+    function calculateAndDisplay() {
+      const revenue = parseFloat(revenueInput.value) || 0;
+      const isHeadOfFamily = headFamilyYes.checked;
+      const children = parseInt(childrenInput.value) || 0;
+      const disabledChildren = parseInt(disabledChildrenInput.value) || 0;
+      const students = parseInt(studentsInput.value) || 0;
+      const parents = parseInt(parentsInput.value) || 0;
+      // Montant total investi (par période × fréquence), déjà mis à jour par updateTotalInvestment()
+      const investment = parseFloat(investmentTotalInput.value) || 0;
+
+      // Calcul du revenu net initial après déductions selon le barème officiel
+      const totalDeductions = calculateDeductions(
+        revenue,
+        isHeadOfFamily,
+        children,
+        disabledChildren,
+        students,
+        parents
+      );
+      const initialNetIncome = Math.max(revenue - totalDeductions, 0);
+      // Impôt initial détaillé
+      const initialDetails = calculateDetailedTax(initialNetIncome);
+      const initialTax = initialDetails.total;
+      // Plancher d'impôt : 45 % de l'impôt initial
+      const minTax = initialTax * 0.45;
+      // Revenu net après investissement
+      const netIncomeAfter = Math.max(initialNetIncome - investment, 0);
+      const investmentDetails = calculateDetailedTax(netIncomeAfter);
+      // Appliquer le minimum d'impôt si nécessaire
+      const adjustedAfter = investmentDetails.total < minTax
+        ? applyMinTax(investmentDetails, minTax)
+        : investmentDetails;
+      const adjustedTax = adjustedAfter.total;
+      // Économies d'impôt
+      const taxSaved = Math.max(0, initialTax - adjustedTax);
+      // Calcul du montant optimal selon l'algorithme officiel
+      const { optimalInvestment } = findOptimalInvestment(initialNetIncome, initialTax);
+      // Affichage des résultats et mise à jour du tableau comparatif
+      displayResults(initialTax, adjustedTax, taxSaved, optimalInvestment);
+      updateComparisonTable(initialDetails, adjustedAfter);
+      updateOptimalRecommendation(optimalInvestment);
+    }
+
+    // Mettre à jour en temps réel
+    revenueInput.addEventListener('input', calculateAndDisplay);
+    headFamilyYes.addEventListener('change', calculateAndDisplay);
+    document.getElementById('head-family-no').addEventListener('change', calculateAndDisplay);
+    childrenInput.addEventListener('input', calculateAndDisplay);
+    disabledChildrenInput.addEventListener('input', calculateAndDisplay);
+    studentsInput.addEventListener('input', calculateAndDisplay);
+    parentsInput.addEventListener('input', calculateAndDisplay);
+    // Mise à jour du montant total lorsque la valeur par période ou le fractionnement change
+    investmentPeriodInput.addEventListener('input', updateTotalInvestment);
+    frequencyInput.addEventListener('change', updateTotalInvestment);
+
+    // Initialiser le montant total à partir du fractionnement et du montant par période par défaut
+    updateTotalInvestment();
+
+    // Rendre la carte de suggestion interactive : elle passe en mode actif au clic
+    const infoCard = document.getElementById('info-card');
+    if (infoCard) {
+      infoCard.addEventListener('click', () => {
+        infoCard.classList.toggle('active');
+      });
+    }
+
+    // Initialiser l'affichage : updateTotalInvestment() a déjà déclenché calculateAndDisplay()
+  </script>
+</body>
+</html>
