@@ -515,7 +515,10 @@
             Situation familiale
           </div>
           <div class="form-group">
-            <label for="revenue"><i class="fas fa-money-bill-wave"></i> Revenu brut imposable (TND)</label>
+            <!--
+              Mettre à jour le libellé pour préciser qu'il s'agit du revenu brut annuel imposable.
+            -->
+            <label for="revenue"><i class="fas fa-money-bill-wave"></i> Revenu brut annuel imposable (TND)</label>
             <input type="number" id="revenue" value="0" min="0" step="1000" />
           </div>
           <div class="form-group">
@@ -646,6 +649,18 @@
   </div>
 
   <script>
+    // Supprime les zéros en tête dans un champ d'entrée numérique.
+    function sanitizeNumberInput(input) {
+      // Conserver la valeur d'origine pour manipulation
+      let val = input.value;
+      if (!val) return;
+      // Supprimer les espaces éventuels pour un traitement plus robuste
+      val = val.replace(/\s+/g, '');
+      // Retirer les zéros en début uniquement s'il y a plus d'un chiffre
+      // par exemple "065000" devient "65000" tandis que "0" reste "0".
+      const sanitized = val.replace(/^0+(?=\d)/, '');
+      input.value = sanitized;
+    }
     // Helper: format a number with thousands separator (space) and 3 decimal places
     function formatAmount(num) {
       const parts = num.toFixed(3).split('.');
@@ -942,11 +957,20 @@
       const total = period * factor;
       // Mettre à jour le champ total directement sans formatage afin de conserver un nombre brut
       investmentTotalInput.value = total;
+      // Supprimer tout zéro en tête potentiel du total (par sécurité)
+      sanitizeNumberInput(investmentTotalInput);
       // Recalculer les résultats après mise à jour
       calculateAndDisplay();
     }
 
     function calculateAndDisplay() {
+      // S'assurer que tous les champs numériques n'ont pas de zéros en tête
+      sanitizeNumberInput(revenueInput);
+      sanitizeNumberInput(childrenInput);
+      sanitizeNumberInput(disabledChildrenInput);
+      sanitizeNumberInput(studentsInput);
+      sanitizeNumberInput(parentsInput);
+      sanitizeNumberInput(investmentPeriodInput);
       const revenue = parseFloat(revenueInput.value) || 0;
       const isHeadOfFamily = headFamilyToggle.checked;
       const children = parseInt(childrenInput.value) || 0;
