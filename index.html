@@ -492,7 +492,24 @@
         grid-template-columns: 1fr;
       }
     }
-  </style>
+  
+    /* Style pour la remarque sous le tableau - adaptatif selon le thème */
+    .table-remark {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      background-color: var(--surface);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      color: var(--text);  /* Utilise la couleur de texte principale qui s'adapte au thème */
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    .table-remark i {
+      color: var(--accent);
+      margin-right: 0.5rem;
+    }
+</style>
 </head>
 <body>
   <div class="container">
@@ -527,7 +544,7 @@
             <div class="switch-container">
               <span class="switch-label">Non</span>
               <label class="switch">
-                <input type="checkbox" id="head-family-toggle" checked />
+                <input type="checkbox" id="head-family-toggle" />
                 <span class="slider"></span>
               </label>
               <span class="switch-label">Oui</span>
@@ -636,6 +653,11 @@
               <!-- Lignes ajoutées par script -->
             </tbody>
           </table>
+          <!-- Remarque ajoutée conformément à la loi de finances 2025 -->
+          <div class="table-remark">
+            <i class="fas fa-info-circle"></i>
+            Ce tableau est conforme aux dispositions de la loi de finances 2025
+          </div>
         </div>
       </div>
     </div>
