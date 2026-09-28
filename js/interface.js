@@ -345,7 +345,9 @@
   }
 
   window.addEventListener('beforeprint', preparerRapport);
-  $('exporter-pdf').addEventListener('click', function () { preparerRapport(); window.print(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.js-pdf'), function (b) {
+    b.addEventListener('click', function () { preparerRapport(); window.print(); });
+  });
   $('mode-conseiller').addEventListener('click', function () {
     var carte = $('carte-conseiller');
     carte.hidden = !carte.hidden;

@@ -481,6 +481,10 @@ table.tranches { width: 100%; min-width: 600px; border-collapse: collapse; font-
 .avertissement { display: flex; gap: 12px; align-items: flex-start; margin-top: 22px; padding: 14px 16px; border-radius: 14px; font-size: 12.5px; line-height: 1.55; color: var(--text-2); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
 .avertissement .ico { color: var(--amber); margin-top: 2px; }
 
+.btn-primaire { background: var(--grad-main); color: #fff; box-shadow: var(--shadow-glow); }
+.btn-primaire:hover { filter: brightness(1.08); }
+.barre-rapport { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px 16px; border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.barre-rapport span { font-size: 13px; color: var(--muted); flex: 1 1 220px; }
 .entete-rapport { display: none; }
 
 @media (max-width: 640px) {
@@ -497,7 +501,7 @@ table.tranches { width: 100%; min-width: 600px; border-collapse: collapse; font-
   @page { margin: 14mm; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   body { background: #fff !important; color: #121631; font-size: 12px; }
-  body::before, .topbar, .hero, .col-saisie, .toasts, .btn, .empty, #proj-champs-impr { display: none !important; }
+  body::before, .topbar, .hero, .barre-rapport, .col-saisie, .toasts, .btn, .empty, #proj-champs-impr { display: none !important; }
   .page { max-width: none; padding: 0; }
   .layout { display: block; margin-top: 0; }
   .col-resultats { display: block; }
