@@ -1195,7 +1195,7 @@
     majBareme();
     calculateAndDisplay();
     afficherPortefeuille();
-    if (!$('install-aide').hidden) $('install-texte').textContent = explicationInstallation();
+    if ($('fenetre-installation').open) remplirFenetre();
     if (!initial) toast(t('Langue : français'));
   }
 
@@ -1457,42 +1457,156 @@
   $('langue').addEventListener('change', function () { appliquerLangue(this.value); });
   window.addEventListener('hashchange', chargerDepuisLien);
 
-  /* Installation de l'application : invitation du navigateur (Chrome, Edge, Android),
-     sinon explications selon l'appareil (iPhone et iPad, Safari sur Mac, autres navigateurs) */
+  /* Installation de l'application.
+     Un site ne peut jamais s'installer sans l'accord de l'utilisateur : le QR code ouvre l'application sur une
+     fenêtre d'installation adaptée à l'appareil (un appui sur Android et sur Chrome/Edge ; deux gestes guidés sur
+     iPhone et iPad ; navigateurs intégrés aux applications : ouvrir la page dans le vrai navigateur). */
+  function urlApplication() {
+    var cfg = window.ConfigSimulateur && window.ConfigSimulateur.urlPublique;
+    return cfg || (location.origin + location.pathname);
+  }
+  function urlInstallation() { return urlApplication().split('#')[0].split('?')[0] + '?installer=1'; }
   function estInstallee() {
     return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
   }
-  function explicationInstallation() {
+  function plateforme() {
     var ua = navigator.userAgent || '';
     var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (ios) return t('Sur iPhone ou iPad : touchez le bouton Partager de Safari, puis « Sur l\'écran d\'accueil ».');
-    if (/Safari/.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua)) return t('Sur Mac avec Safari : menu Fichier, puis « Ajouter au Dock ».');
-    if (/Android/.test(ua)) return t('Sur Android : ouvrez le menu ⋮ du navigateur, puis « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».');
-    return t('Ouvrez cette page avec Chrome ou Edge, puis cliquez sur l\'icône d\'installation dans la barre d\'adresse (ou menu ⋮, « Installer »).');
+    if (/FBAN|FBAV|FB_IAB|Instagram|Line\/|Snapchat|TikTok|musical_ly|LinkedInApp|Twitter/i.test(ua)) return 'integre';
+    if (ios) return 'ios';
+    if (/Android/.test(ua)) return 'android';
+    if (/Safari/.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua)) return 'mac';
+    return 'ordinateur';
   }
-  function majInstallation() { $('installer').hidden = estInstallee(); }
-  $('installer').addEventListener('click', function () {
+  function etapes(liste) {
+    return '<ol class="fi-etapes">' + liste.map(function (e) {
+      return '<li>' + (e[1] ? '<svg class="ico"><use href="#' + e[1] + '"/></svg>' : '') + '<span>' + echapper(e[0]) + '</span></li>';
+    }).join('') + '</ol>';
+  }
+
+  var attenteInvitation = null;
+  function remplirFenetre() {
+    var corps = $('fi-corps'), btn = $('fi-installer'), copie = $('fi-copier');
+    var pf = plateforme();
     var invitation = window.__invitationInstallation;
-    if (invitation) {
-      invitation.prompt();
-      invitation.userChoice.then(function (choix) {
-        window.__invitationInstallation = null;
-        if (choix && choix.outcome === 'accepted') toast(t('Installation en cours : l\'application sera disponible depuis votre écran d\'accueil.'));
-      }).catch(function () {});
+    clearTimeout(attenteInvitation);
+    btn.hidden = true; btn.disabled = false; copie.hidden = true;
+    btn.lastChild.textContent = t('Installer l\'application');
+    /* QR code pour installer sur un téléphone (affiché sur ordinateur) */
+    var surOrdinateur = pf === 'ordinateur' || pf === 'mac';
+    $('fi-qr').hidden = !surOrdinateur;
+    if (surOrdinateur) {
+      var qr = matriceQR(urlInstallation());
+      $('fi-qr-code').innerHTML = qr ? qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) : '';
+    }
+    if (estInstallee()) {
+      corps.innerHTML = '<p>' + echapper(t('L\'application est déjà installée sur cet appareil.')) + '</p>';
       return;
     }
-    $('install-texte').textContent = explicationInstallation();
-    $('install-aide').hidden = false;
+    if (pf === 'integre') {
+      corps.innerHTML = '<p>' + echapper(t('Ce navigateur intégré à une application ne permet pas l\'installation.')) + '</p>' +
+        etapes([[t('Touchez le menu ⋮ ou « … » en haut de l\'écran.'), 'i-menu'], [t('Choisissez « Ouvrir dans le navigateur » (Chrome ou Safari).'), 'i-globe'], [t('Scannez à nouveau le QR code ou touchez « Installer l\'application ».'), 'i-phone']]);
+      copie.hidden = false;
+      return;
+    }
+    if (pf === 'ios') {
+      corps.innerHTML = '<p>' + echapper(t('Sur iPhone et iPad, l\'installation se fait depuis le bouton Partager, en deux gestes :')) + '</p>' +
+        etapes([[t('Touchez le bouton Partager (carré avec une flèche vers le haut), en bas de Safari ou dans la barre d\'adresse.'), 'i-partage-ios'], [t('Faites défiler et choisissez « Sur l\'écran d\'accueil ».'), 'i-ajout'], [t('Touchez « Ajouter » : l\'icône du simulateur apparaît sur l\'écran d\'accueil.'), 'i-check']]);
+      return;
+    }
+    if (invitation) {
+      corps.innerHTML = '<p>' + echapper(t('Touchez « Installer l\'application », puis confirmez : l\'icône du simulateur apparaît sur votre écran d\'accueil.')) + '</p>';
+      btn.hidden = false;
+      return;
+    }
+    /* L'invitation du navigateur peut arriver quelques secondes après l'ouverture : on l'attend brièvement */
+    corps.innerHTML = '<p>' + echapper(t('Préparation de l\'installation…')) + '</p>';
+    btn.hidden = false;
+    btn.disabled = true;
+    btn.lastChild.textContent = t('Préparation…');
+    attenteInvitation = setTimeout(function () {
+      if (window.__invitationInstallation) return;
+      btn.hidden = true;
+      corps.innerHTML = pf === 'android'
+        ? '<p>' + echapper(t('Installez depuis le menu du navigateur :')) + '</p>' + etapes([[t('Touchez le menu ⋮ en haut à droite de Chrome (ou ≡ dans Samsung Internet).'), 'i-menu'], [t('Choisissez « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».'), 'i-ajout'], [t('Confirmez : l\'icône du simulateur apparaît sur l\'écran d\'accueil.'), 'i-check']])
+        : pf === 'mac'
+          ? '<p>' + echapper(t('Sur Mac avec Safari : menu Fichier, puis « Ajouter au Dock ».')) + '</p>'
+          : '<p>' + echapper(t('Ouvrez cette page avec Chrome ou Edge, puis cliquez sur l\'icône d\'installation dans la barre d\'adresse (ou menu ⋮, « Installer »).')) + '</p>';
+    }, 4000);
+  }
+  function ouvrirFenetreInstallation() {
+    remplirFenetre();
+    var f = $('fenetre-installation');
+    if (!f.open) { if (f.showModal) f.showModal(); else f.setAttribute('open', ''); }
+  }
+  function fermerFenetreInstallation() {
+    clearTimeout(attenteInvitation);
+    var f = $('fenetre-installation');
+    if (f.open) { if (f.close) f.close(); else f.removeAttribute('open'); }
+  }
+  function lancerInvitation() {
+    var invitation = window.__invitationInstallation;
+    if (!invitation) return false;
+    invitation.prompt();
+    invitation.userChoice.then(function (choix) {
+      window.__invitationInstallation = null;
+      if (choix && choix.outcome === 'accepted') {
+        fermerFenetreInstallation();
+        toast(t('Installation en cours : l\'application sera disponible depuis votre écran d\'accueil.'));
+      } else {
+        remplirFenetre();
+      }
+    }).catch(function () {});
+    return true;
+  }
+  function majInstallation() {
+    $('installer').hidden = estInstallee();
+    if ($('fenetre-installation').open) remplirFenetre();
+  }
+  $('installer').addEventListener('click', function () {
+    /* Sur téléphone ou Chrome/Edge avec invitation disponible : fenêtre du navigateur directement */
+    var pf = plateforme();
+    if (pf !== 'ordinateur' && pf !== 'mac' && lancerInvitation()) return;
+    ouvrirFenetreInstallation();
   });
-  $('install-fermer').addEventListener('click', function () { $('install-aide').hidden = true; });
+  $('fi-installer').addEventListener('click', function () { if (!lancerInvitation()) remplirFenetre(); });
+  $('fi-fermer').addEventListener('click', fermerFenetreInstallation);
+  $('fenetre-installation').addEventListener('click', function (e) { if (e.target === this) fermerFenetreInstallation(); });
+  $('fi-copier').addEventListener('click', function () {
+    var lien = urlInstallation();
+    (navigator.clipboard && window.isSecureContext ? navigator.clipboard.writeText(lien) : Promise.reject())
+      .then(function () { toast(t('Lien copié : collez-le dans Chrome ou Safari.')); }, function () { window.prompt(t('Copiez ce lien et ouvrez-le dans Chrome ou Safari :'), lien); });
+  });
+  $('fi-affiche').addEventListener('click', function () {
+    if (!window.RapportPDF || !window.jspdf) { toast(t('Envoi impossible depuis ce navigateur : téléchargez le PDF.'), 'erreur'); return; }
+    var langue = I18n.langue();
+    if (langue === 'ar') I18n.definir('fr');
+    try {
+      var blob = window.RapportPDF.affiche({
+        t: t, langue: I18n.langue(), lien: urlInstallation(), qr: matriceQR(urlInstallation()),
+        agence: agencePourRapport()
+      });
+      telecharger('affiche-installation-simulateur.pdf', blob, 'application/pdf');
+    } finally { I18n.definir(langue); }
+  });
   document.addEventListener('installation-possible', majInstallation);
   window.addEventListener('appinstalled', function () {
     window.__invitationInstallation = null;
     $('installer').hidden = true;
-    $('install-aide').hidden = true;
+    fermerFenetreInstallation();
     toast(t('Application installée.'));
   });
   majInstallation();
+
+  /* Ouverture depuis le QR code (?installer=1) : fenêtre d'installation immédiate */
+  (function () {
+    var params = new URLSearchParams(location.search);
+    if (!params.has('installer')) return;
+    params.delete('installer');
+    try { history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } catch (e) {}
+    if (estInstallee()) return;
+    setTimeout(ouvrirFenetreInstallation, 300);
+  })();
 
   /* Mode hors ligne (PWA) : seulement en HTTPS ou en local */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {

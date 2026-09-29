@@ -221,26 +221,51 @@ test('partage : liens WhatsApp et e-mail, infobulles et FAQ', async ({ page }) =
   await expect(page.locator('.faq details').first()).toHaveAttribute('open', '');
 });
 
-test('installer l\'application : invitation du navigateur ou explications', async ({ page }) => {
+test('installer l\'application : fenêtre, QR code et invitation du navigateur', async ({ page, isMobile }) => {
   await expect(page.locator('#installer')).toBeVisible();
-  /* Sans invitation du navigateur : explications selon l'appareil */
   await page.click('#installer');
-  await expect(page.locator('#install-aide')).toBeVisible();
-  await expect(page.locator('#install-texte')).not.toBeEmpty();
-  await page.click('#install-fermer');
-  await expect(page.locator('#install-aide')).toBeHidden();
-  /* Avec invitation (événement beforeinstallprompt simulé) : la fenêtre du navigateur s'ouvre */
+  const fenetre = page.locator('#fenetre-installation');
+  await expect(fenetre).toBeVisible();
+  if (isMobile) {
+    /* Android sans invitation du navigateur : attente, puis étapes par le menu */
+    await expect(page.locator('#fi-installer')).toBeDisabled();
+    await expect(page.locator('.fi-etapes li')).toHaveCount(3, { timeout: 6000 });
+    await expect(page.locator('#fi-qr')).toBeHidden();
+  } else {
+    /* Ordinateur : QR code d'installation et affiche à imprimer */
+    await expect(page.locator('#fi-qr-code svg')).toBeVisible();
+    const [affiche] = await Promise.all([page.waitForEvent('download'), page.click('#fi-affiche')]);
+    expect(affiche.suggestedFilename()).toBe('affiche-installation-simulateur.pdf');
+    expect(fs.readFileSync(await affiche.path()).subarray(0, 5).toString()).toBe('%PDF-');
+  }
+  await page.click('#fi-fermer');
+  await expect(fenetre).toBeHidden();
+  /* Invitation du navigateur (événement beforeinstallprompt simulé) */
   await page.evaluate(() => {
     const e = new Event('beforeinstallprompt', { cancelable: true });
-    e.prompt = () => { window.__invite = true; };
+    e.prompt = () => { window.__invite = (window.__invite || 0) + 1; };
     e.userChoice = Promise.resolve({ outcome: 'accepted' });
     window.dispatchEvent(e);
   });
   await page.click('#installer');
-  expect(await page.evaluate(() => window.__invite)).toBe(true);
-  await expect(page.locator('#install-aide')).toBeHidden();
+  if (!isMobile) {
+    await expect(page.locator('#fi-installer')).toBeEnabled();
+    await page.click('#fi-installer');
+  }
+  await expect.poll(() => page.evaluate(() => window.__invite)).toBe(1);
   await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
   await expect(page.locator('#installer')).toBeHidden();
+});
+
+test('QR code : l\'adresse ?installer=1 ouvre la fenêtre d\'installation', async ({ page }) => {
+  await page.goto('/?installer=1');
+  await expect(page.locator('#fenetre-installation')).toBeVisible();
+  expect(new URL(page.url()).search).toBe('');
+});
+
+test('le QR code contient l\'adresse publique d\'installation', async ({ page }) => {
+  const url = await page.evaluate(() => window.ConfigSimulateur.urlPublique);
+  expect(url).toBe('https://mohamed-ja.github.io/simulateur-assurance-vie/');
 });
 
 test('assurance vie et CEA : règles distinctes et répartition', async ({ page }) => {

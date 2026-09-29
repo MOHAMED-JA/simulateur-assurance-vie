@@ -441,5 +441,89 @@
     return doc.output('blob');
   }
 
-  racine.RapportPDF = { generer: generer };
+  /* Affiche A4 à imprimer : QR code qui ouvre l'application sur sa fenêtre d'installation.
+     d = { t, lien, qr (matrice), agence } */
+  function affiche(d) {
+    var jsPDF = racine.jspdf.jsPDF;
+    var doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    var t = d.t;
+    function couleur(fn, c) { doc[fn](c[0], c[1], c[2]); }
+    function police(taille, gras, c) { doc.setFont('helvetica', gras ? 'bold' : 'normal'); doc.setFontSize(taille); couleur('setTextColor', c || C.encre); }
+    /* En-tête en dégradé */
+    var n = 120;
+    for (var i = 0; i < n; i++) {
+      var p = i / (n - 1);
+      couleur('setFillColor', p < 0.5 ? melange(C.indigo, C.violet, p * 2) : melange(C.violet, C.fuchsia, (p - 0.5) * 2));
+      doc.rect(W * i / n, 0, W / n + 0.3, 78, 'F');
+    }
+    /* Logo */
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(W / 2 - 13, 12, 26, 26, 6, 6, 'F');
+    var k = 26 / 16, x0 = W / 2 - 13, y0 = 12;
+    couleur('setDrawColor', C.indigo); doc.setLineWidth(1.6); doc.setLineJoin('round'); doc.setLineCap('round');
+    doc.lines([[5 * k, -2 * k], [5 * k, 2 * k], [0, 4 * k], [-5 * k, 6 * k], [-5 * k, -6 * k]], x0 + 3 * k, y0 + 4 * k, [1, 1], 'S', true);
+    couleur('setDrawColor', C.vert);
+    doc.lines([[1.6 * k, 1.6 * k], [3 * k, -3.2 * k]], x0 + 5.8 * k, y0 + 8 * k, [1, 1], 'S', false);
+    police(24, true, [255, 255, 255]);
+    doc.text(txt(t('Simulateur Assurance Vie & CEA')), W / 2, 52, { align: 'center' });
+    police(12.5, false, [255, 255, 255]);
+    doc.text(txt(t('Calculez votre économie d\'impôt en quelques secondes, même sans réseau.')), W / 2, 62, { align: 'center' });
+    /* Appel */
+    police(22, true, C.encre);
+    doc.text(txt(t('Scannez pour installer l\'application')), W / 2, 94, { align: 'center' });
+    police(12, false, C.gris);
+    doc.text(txt(t('Ouvrez l\'appareil photo du téléphone et visez le code.')), W / 2, 102, { align: 'center' });
+    /* QR code */
+    var cote = 84, xq = (W - cote) / 2, yq = 118;
+    couleur('setFillColor', C.fond);
+    doc.roundedRect(xq - 8, yq - 8, cote + 16, cote + 16, 6, 6, 'F');
+    doc.setFillColor(255, 255, 255);
+    doc.rect(xq - 3, yq - 3, cote + 6, cote + 6, 'F');
+    if (d.qr) {
+      var m = d.qr.getModuleCount(), c = cote / m;
+      couleur('setFillColor', C.encre);
+      for (var r = 0; r < m; r++) for (var col = 0; col < m; col++) if (d.qr.isDark(r, col)) doc.rect(xq + col * c, yq + r * c, c + 0.03, c + 0.03, 'F');
+    }
+    doc.link(xq, yq, cote, cote, { url: d.lien });
+    /* Étapes */
+    var y = yq + cote + 14;
+    var colonnes = [
+      [t('Android'), [t('Scannez le code.'), t('Touchez « Installer l\'application ».'), t('Confirmez « Installer ».')]],
+      [t('iPhone et iPad'), [t('Scannez le code, puis ouvrez le lien dans Safari.'), t('Touchez Partager, puis « Sur l\'écran d\'accueil ».'), t('Touchez « Ajouter ».')]]
+    ];
+    var lc = (W - 2 * M - 8) / 2;
+    colonnes.forEach(function (colonne, ic) {
+      var xc = M + ic * (lc + 8);
+      couleur('setFillColor', C.fond);
+      doc.roundedRect(xc, y, lc, 44, 4, 4, 'F');
+      police(13, true, ic ? C.orange : C.indigo);
+      doc.text(txt(colonne[0]), xc + 6, y + 9);
+      colonne[1].forEach(function (e, ie) {
+        var yy = y + 18 + ie * 9.5;
+        couleur('setFillColor', ic ? C.orange : C.indigo);
+        doc.circle(xc + 8.5, yy - 1.3, 3, 'F');
+        police(9, true, [255, 255, 255]);
+        doc.text(String(ie + 1), xc + 8.5, yy + 0.1, { align: 'center' });
+        police(10, false, C.texte);
+        doc.text(doc.splitTextToSize(txt(e), lc - 18).slice(0, 2), xc + 14, yy);
+      });
+    });
+    y += 52;
+    police(9.5, false, C.indigo);
+    doc.text(txt(d.lien), W / 2, y, { align: 'center' });
+    if (d.agence && (d.agence.nom || d.agence.tel || d.agence.email)) {
+      y += 8;
+      police(12, true, C.encre);
+      if (d.agence.nom) { doc.text(txt(d.agence.nom), W / 2, y, { align: 'center' }); y += 6; }
+      police(10, false, C.texte);
+      var coords = [d.agence.tel, d.agence.email, d.agence.adresse].filter(Boolean).join('   ·   ');
+      if (coords) doc.text(doc.splitTextToSize(txt(coords), W - 2 * M), W / 2, y, { align: 'center' });
+    }
+    police(8, false, C.gris);
+    doc.text(txt(t('Gratuit, sans inscription, aucune donnée envoyée. Simulation indicative, non contractuelle.')), W / 2, H - 7, { align: 'center' });
+    doc.setProperties({ title: txt(t('Scannez pour installer l\'application')), creator: 'Simulateur Assurance Vie et CEA' });
+    return doc.output('blob');
+  }
+
+  racine.RapportPDF = { generer: generer, affiche: affiche };
 })(typeof self !== 'undefined' ? self : this);

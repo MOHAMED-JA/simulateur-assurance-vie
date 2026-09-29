@@ -80,6 +80,9 @@
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
     <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/></symbol>
     <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+    <symbol id="i-partage-ios" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></symbol>
+    <symbol id="i-ajout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
     <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
   </defs>
@@ -134,10 +137,6 @@
           <span><small>Application faite par</small>Mohamed Aziz Jaouadi</span>
         </a>
       </div>
-    </div>
-    <div class="install-aide" id="install-aide" hidden role="note">
-      <p id="install-texte"></p>
-      <button type="button" class="lien-btn" id="install-fermer">Compris</button>
     </div>
   </section>
 
@@ -749,6 +748,30 @@
     <span>© <span id="annee"></span> · <a href="https://www.linkedin.com/in/mohamed-aziz-jaouadi-%C2%AEpsm-i-%C2%AEpspo-l-%C2%AEistqb-851009115/" target="_blank" rel="noopener noreferrer">Mohamed Aziz Jaouadi</a></span>
   </footer>
 </main>
+
+<dialog class="fenetre-installation" id="fenetre-installation" aria-labelledby="fi-titre">
+  <div class="fi-tete">
+    <img src="assets/icon-192.png" alt="" width="64" height="64">
+    <div>
+      <h2 id="fi-titre">Installer le simulateur</h2>
+      <p>Sur l'écran d'accueil, comme une application : ouverture en un geste, même sans réseau.</p>
+    </div>
+  </div>
+  <div class="fi-corps" id="fi-corps"></div>
+  <div class="fi-qr" id="fi-qr" hidden>
+    <div class="qr" id="fi-qr-code" role="img" aria-label="QR code d'installation de l'application"></div>
+    <div>
+      <p class="fi-qr-titre">Installer sur un téléphone</p>
+      <p>Scannez ce code avec l'appareil photo du téléphone : l'application s'ouvre directement sur cette fenêtre d'installation.</p>
+      <button type="button" class="btn btn-ghost btn-sm" id="fi-affiche"><svg class="ico ico-sm"><use href="#i-download"/></svg>Affiche à imprimer (PDF)</button>
+    </div>
+  </div>
+  <div class="fi-actions">
+    <button type="button" class="btn btn-primaire" id="fi-installer" hidden><svg class="ico"><use href="#i-phone"/></svg><span>Installer l'application</span></button>
+    <button type="button" class="btn btn-ghost" id="fi-copier" hidden><svg class="ico"><use href="#i-share"/></svg>Copier le lien</button>
+    <button type="button" class="btn btn-ghost" id="fi-fermer">Fermer</button>
+  </div>
+</dialog>
 
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 

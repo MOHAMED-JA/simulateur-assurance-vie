@@ -603,7 +603,7 @@ table.comparaison { min-width: 560px; }
 .btn-installer:hover { transform: translateY(-1px); box-shadow: 0 16px 34px -10px rgba(15, 10, 40, 0.55); }
 .btn-installer:active { transform: scale(0.97); }
 .btn-installer .ico { width: 18px; height: 18px; }
-.install-aide {
+._ancien-install-aide {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding: 12px 16px; border-radius: 14px;
   font-size: 13.5px; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.3); animation: entrer var(--t) var(--ease) both;
 }
@@ -642,6 +642,32 @@ table.comparaison { min-width: 560px; }
 #bloc-avance .agence-champs { padding-bottom: 12px; }
 #avance-err { padding: 0 14px; }
 .sortie-titre { margin: 18px 0 4px; }
+
+/* Fenêtre d'installation (QR code) */
+.fenetre-installation {
+  width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; padding: 0; border: 0; border-radius: var(--radius-xl);
+  color: var(--text); background: var(--surface); box-shadow: 0 40px 80px -20px rgba(15, 10, 40, 0.55);
+}
+.fenetre-installation[open] { animation: toast-in 320ms var(--ease) both; }
+.fenetre-installation::backdrop { background: rgba(11, 10, 17, 0.55); backdrop-filter: blur(4px); }
+.fi-tete { display: flex; align-items: center; gap: 16px; padding: 22px 22px 18px; color: #fff; background: var(--grad-hero); }
+.fi-tete img { width: 64px; height: 64px; border-radius: 16px; flex: none; box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45); }
+.fi-tete h2 { font-size: 20px; font-weight: 800; }
+.fi-tete p { margin-top: 4px; font-size: 13.5px; opacity: 0.9; }
+.fi-corps { padding: 18px 22px 4px; font-size: 14.5px; color: var(--text-2); }
+.fi-corps p + p { margin-top: 8px; }
+.fi-etapes { margin: 4px 0 0; padding: 0; list-style: none; counter-reset: etape; display: grid; gap: 10px; }
+.fi-etapes li { counter-increment: etape; display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.fi-etapes li::before { content: counter(etape); width: 26px; height: 26px; border-radius: 99px; flex: none; display: grid; place-items: center; font-weight: 800; font-size: 13px; color: #fff; background: var(--grad-main); }
+.fi-etapes .ico { width: 20px; height: 20px; color: var(--primary); flex: none; }
+.fi-qr { display: flex; gap: 18px; align-items: center; margin: 14px 22px 0; padding: 14px; border-radius: var(--radius); background: var(--surface-2); }
+.fi-qr .qr { width: 150px; height: 150px; flex: none; }
+.fi-qr-titre { font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.fi-qr p { font-size: 13px; color: var(--text-2); }
+.fi-qr .btn { margin-top: 10px; }
+.fi-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; padding: 18px 22px 22px; }
+.fi-actions .btn-primaire { flex: 1 1 220px; height: 50px; font-size: 15.5px; }
+@media (max-width: 480px) { .fi-qr { flex-direction: column; text-align: center; } }
 
 /* Infobulles d'explication */
 .aide {
