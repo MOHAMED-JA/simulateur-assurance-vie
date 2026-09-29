@@ -134,7 +134,73 @@ test('aucun défilement horizontal, dans les trois langues', async ({ page }) =>
   await page.fill('#investment-amount-period', '500');
   for (const l of ['fr', 'en', 'ar']) {
     await page.selectOption('#langue', l);
+    await page.check('#p-retraite'); await page.click('#partager');
     const [large, visible] = await page.evaluate(() => [window.innerWidth, document.documentElement.clientWidth]);
     expect(large, l).toBe(visible);
   }
+});
+
+test('objectif de capital et mode retraite', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.check('#p-retraite');
+  await page.fill('#p-age', '35');
+  await page.fill('#p-depart', '60');
+  await expect(page.locator('#p-duree')).toHaveValue('25');
+  await page.fill('#obj-capital', '150000');
+  await expect(page.locator('#obj-res')).toContainText('150 000');
+  await page.click('#obj-appliquer');
+  await expect(page.locator('#scen-median')).toHaveText(/^150\s?000,\d{3}/);
+  await page.fill('#p-age', '70');
+  await expect(page.locator('#retraite-err')).not.toBeEmpty();
+});
+
+test('comparatif des placements et revenu à la retraite', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.fill('#investment-amount-period', '500');
+  await expect(page.locator('#comparatif-barres .cmp-ligne')).toHaveCount(4);
+  await page.fill('#v-pension', '1500');
+  await expect(page.locator('#prev-lignes')).toContainText('1 500,000');
+});
+
+test('agence : coordonnées mémorisées et logo', async ({ page }) => {
+  await page.click('#mode-conseiller');
+  await page.click('#agence summary');
+  await page.fill('#ag-nom', 'Agence Test');
+  await page.fill('#c-conseiller', 'A. Conseiller');
+  await page.setInputFiles('#ag-logo', { name: 'logo.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64') });
+  await expect(page.locator('#ag-logo-apercu img')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('#ag-nom')).toHaveValue('Agence Test');
+  await expect(page.locator('#c-conseiller')).toHaveValue('A. Conseiller');
+  await expect(page.locator('#ag-logo-apercu img')).toHaveCount(1);
+});
+
+test('portefeuille : tableau de bord, sauvegarde et restauration', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.fill('#investment-amount-period', '500');
+  await page.click('#enregistrer');
+  await expect(page.locator('#port-stats')).toBeVisible();
+  await expect(page.locator('#st-nombre')).toHaveText('1');
+  const [fichier] = await Promise.all([page.waitForEvent('download'), page.click('#port-sauver')]);
+  const contenu = fs.readFileSync(await fichier.path(), 'utf8');
+  page.once('dialog', (d) => d.accept());
+  await page.click('#port-vider');
+  await expect(page.locator('.port-item')).toHaveCount(0);
+  await page.setInputFiles('#port-restaurer', { name: 'sauvegarde.json', mimeType: 'application/json', buffer: Buffer.from(contenu) });
+  await expect(page.locator('.port-item')).toHaveCount(1);
+  await page.setInputFiles('#port-restaurer', { name: 'faux.json', mimeType: 'application/json', buffer: Buffer.from('{"x":1}') });
+  await expect(page.locator('.toast-erreur')).toBeVisible();
+});
+
+test('partage : liens WhatsApp et e-mail, infobulles et FAQ', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.click('#partager');
+  await expect(page.locator('#envoi-whatsapp')).toHaveAttribute('href', /^https:\/\/wa\.me\/\?text=.*r%3D45000/);
+  await expect(page.locator('#envoi-email')).toHaveAttribute('href', /^mailto:\?subject=/);
+  await page.click('[aria-controls="aide-plancher"]');
+  await expect(page.locator('#aide-plancher')).toBeVisible();
+  await page.click('[aria-controls="aide-plancher"]');
+  await expect(page.locator('#aide-plancher')).toBeHidden();
+  await page.locator('.faq summary').first().click();
+  await expect(page.locator('.faq details').first()).toHaveAttribute('open', '');
 });

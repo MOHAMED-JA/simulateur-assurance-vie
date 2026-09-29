@@ -15,6 +15,7 @@
   var XL = window.ExportTableur;
   var Port = window.Portefeuille;
   var I18n = window.I18n;
+  var Conseil = window.Conseil;
   var t = I18n.t;
 
   var FACTEURS = Moteur.FACTEURS;
@@ -96,7 +97,7 @@
      =================================================================== */
   var ui = { chef: false, frequence: 'Mensuel', annee: Baremes.parDefaut, calc: null, rachat: null, prevoyance: null, inverse: null, portefeuille: [], selection: [] };
   var champsEntiers = ['children', 'disabled-children', 'students', 'parents'];
-  var champsHypotheses = ['p-duree', 'p-rendement', 'p-frais', 'p-compar', 'p-ecart', 'p-croissance', 'p-inflation'];
+  var champsHypotheses = ['p-duree', 'p-rendement', 'p-frais', 'p-compar', 'p-ecart', 'p-croissance', 'p-inflation', 'p-impot-interets'];
   var depot = null;
 
   function lireEntier(id) {
@@ -120,7 +121,9 @@
       versement: isFinite(per.v) ? per.v : 0,
       dureeAns: nombre('p-duree'), rendementPct: nombre('p-rendement'), fraisPct: nombre('p-frais'),
       comparPct: nombre('p-compar'), reinvestir: $('p-reinvest').checked,
-      ecartPct: nombre('p-ecart'), croissancePct: nombre('p-croissance'), inflationPct: nombre('p-inflation')
+      ecartPct: nombre('p-ecart'), croissancePct: nombre('p-croissance'), inflationPct: nombre('p-inflation'),
+      impotInteretsPct: nombre('p-impot-interets'),
+      ageActuel: ui.retraite ? ui.retraite.age : 0, ageDepart: ui.retraite ? ui.retraite.depart : 0
     };
   }
 
@@ -146,8 +149,13 @@
     $('p-croissance').value = fmtLibre(e.croissancePct);
     $('p-inflation').value = fmtLibre(e.inflationPct);
     $('p-reinvest').checked = !!e.reinvestir;
+    $('p-impot-interets').value = fmtLibre(e.impotInteretsPct);
+    var retraite = e.ageActuel > 0 && e.ageDepart > 0;
+    $('p-retraite').checked = retraite;
+    $('p-age').value = retraite ? String(e.ageActuel) : '';
+    $('p-depart').value = String(retraite ? e.ageDepart : 60);
     synchroniserSupport();
-    if (e.croissancePct > 0 || e.inflationPct > 0 || e.ecartPct !== 2) $('p-avance').open = true;
+    if (e.croissancePct > 0 || e.inflationPct > 0 || e.ecartPct !== 2 || e.impotInteretsPct !== 20) $('p-avance').open = true;
     majCurseur();
     majSteppers();
     calculateAndDisplay();
@@ -213,6 +221,7 @@
     $('period-err').textContent = isFinite(per.v) ? '' : t('Saisissez un montant valide (ex. 500).');
     afficherAmbiguite('revenue', rev, 'revenue-amb');
     afficherAmbiguite('investment-amount-period', per, 'period-amb');
+    majRetraite();
 
     var etat = lireEtat();
     var calc = Scenario.calculer(etat);
@@ -245,6 +254,7 @@
     afficherTranches(sim);
     afficherCourbeEconomie(sim, investment);
     majProjection(calc);
+    majObjectif(calc);
     majRachat();
     majPrevoyance();
     if (!$('panneau-partage').hidden) majPartage();
@@ -408,6 +418,7 @@
       case 'ecart': return t('L\'écart entre scénarios doit être compris entre 0 et 20 points.');
       case 'croissance': return t('La hausse annuelle doit être comprise entre 0 et 20 %.');
       case 'inflation': return t('L\'inflation doit être comprise entre 0 et 30 %.');
+      case 'impotInterets': return t('L\'impôt sur les intérêts doit être compris entre 0 et 50 %.');
       default: return '';
     }
   }
@@ -431,6 +442,7 @@
       [t('Valeur totale (capital + économie d\'impôt)'), fmtTND(calc.valeurTotale), 'fort'],
       [t('Rendement annuel effectif, économie d\'impôt comprise'), calc.effectif === null ? '—' : fmtPct(calc.effectif)],
       [t('Placement classique à {0} (mêmes versements)', [fmtPct(e.comparPct)]), fmtTND(calc.classique)],
+      [t('Placement classique après impôt sur les intérêts ({0})', [fmtPct(calc.impotInteretsPct)]), fmtTND(calc.classiqueNet)],
       [t('Avantage sur le placement classique'), fmtSigne(calc.avantage), calc.avantage >= 0 ? 'fort' : '']
     );
     return l;
@@ -445,9 +457,9 @@
     $('proj-err').textContent = err ? messageErreur(err) : '';
     champsHypotheses.forEach(function (id) { $(id).closest('.field').classList.remove('invalide'); });
     if (err) {
-      var id = { duree: 'p-duree', rendement: 'p-rendement', frais: 'p-frais', compar: 'p-compar', ecart: 'p-ecart', croissance: 'p-croissance', inflation: 'p-inflation' }[err.code];
+      var id = { duree: 'p-duree', rendement: 'p-rendement', frais: 'p-frais', compar: 'p-compar', ecart: 'p-ecart', croissance: 'p-croissance', inflation: 'p-inflation', impotInterets: 'p-impot-interets' }[err.code];
       if (id) $(id).closest('.field').classList.add('invalide');
-      if (id === 'p-ecart' || id === 'p-croissance' || id === 'p-inflation') $('p-avance').open = true;
+      if (['p-ecart', 'p-croissance', 'p-inflation', 'p-impot-interets'].indexOf(id) !== -1) $('p-avance').open = true;
     }
     var actif = calc.actif;
     $('proj-vide').hidden = actif || !!err;
@@ -465,6 +477,73 @@
     $('graph-capital').innerHTML = Graph.courbeCapital(sc, { aria: t('Capital constitué par année selon trois scénarios de rendement'), x: t('Années') }, reel);
     $('leg-reel').hidden = !reel;
     $('proj-lignes').innerHTML = lignesProjection(calc).map(function (l) { return ligne(l[0], l[1], l[2]); }).join('');
+    afficherComparatif(calc);
+  }
+
+  /* Comparatif des placements au terme (barres horizontales) */
+  function elementsComparatif(calc) {
+    var e = calc.etat;
+    return [
+      [t('Assurance vie ou CEA : capital + économie d\'impôt'), calc.valeurTotale, 'c1'],
+      [t('Placement classique à {0}, avant impôt', [fmtPct(e.comparPct)]), calc.classique, 'c2'],
+      [t('Placement classique à {0}, après impôt sur les intérêts ({1})', [fmtPct(e.comparPct), fmtPct(calc.impotInteretsPct)]), calc.classiqueNet, 'c3'],
+      [t('Versements cumulés'), calc.med.totalVerse, 'c4']
+    ];
+  }
+
+  function afficherComparatif(calc) {
+    var el = elementsComparatif(calc);
+    var max = Math.max.apply(null, el.map(function (x) { return x[1]; })) || 1;
+    $('comparatif-barres').innerHTML = el.map(function (x) {
+      return '<div class="cmp-ligne"><span class="cmp-lib">' + echapper(x[0]) + '</span>' +
+        '<span class="cmp-trk"><span class="cmp-fill ' + x[2] + '" style="width:' + (Math.max(0, x[1]) / max * 100).toFixed(2) + '%"></span></span>' +
+        '<b class="cmp-val">' + fmtTND(x[1]) + '</b></div>';
+    }).join('');
+  }
+
+  /* ===================================================================
+     Mode retraite et objectif de capital
+     =================================================================== */
+  function majRetraite() {
+    var actif = $('p-retraite').checked;
+    $('bloc-retraite').hidden = !actif;
+    $('p-duree').readOnly = actif;
+    $('p-duree').closest('.field').classList.toggle('verrouille', actif);
+    $('retraite-err').textContent = '';
+    ui.retraite = null;
+    if (!actif) return;
+    var a = lire('p-age'), d = lire('p-depart');
+    if (a.vide) { $('retraite-err').textContent = t('Indiquez votre âge actuel.'); return; }
+    var r = Conseil.dureeRetraite(a.v, d.v, Scenario.DUREE_MAX);
+    if (r.erreur) {
+      $('retraite-err').textContent = {
+        age: t('L\'âge actuel doit être un nombre entier entre 18 et 75 ans.'),
+        depart: t('L\'âge de départ doit être un nombre entier entre 40 et 80 ans.'),
+        ecart: t('L\'écart entre les deux âges doit être compris entre 1 et {0} ans.', [Scenario.DUREE_MAX])
+      }[r.erreur];
+      return;
+    }
+    $('p-duree').value = String(r.duree);
+    ui.retraite = { age: a.v, depart: d.v };
+  }
+
+  function majObjectif(calc) {
+    var r = lire('obj-capital');
+    var res = $('obj-res'), btn = $('obj-appliquer');
+    btn.hidden = true;
+    ui.objectif = null;
+    $('bloc-objectif').classList.remove('ok', 'ko');
+    if (r.vide) { res.textContent = t('Indiquez le capital souhaité au terme : le simulateur calcule le versement nécessaire.'); return; }
+    if (!isFinite(r.v)) { res.textContent = t('Saisissez un montant valide (ex. 500).'); $('bloc-objectif').classList.add('ko'); return; }
+    if (calc.erreur) { res.textContent = t('Corrigez d\'abord les hypothèses de projection.'); $('bloc-objectif').classList.add('ko'); return; }
+    var o = Conseil.versementPourCapital(calc.etat, r.v);
+    if (!o || !(o.versement > 0)) { res.textContent = ''; return; }
+    var f = calc.facteur;
+    $('bloc-objectif').classList.add('ok');
+    res.textContent = t('Versez {0} {1} (soit {2} par an) pour atteindre {3} en {4} ans.', [fmtTND(o.versement), t(PERIODES[calc.etat.frequence]), fmtTND(o.versement * f), fmtTND(o.capital), calc.etat.dureeAns]) +
+      (calc.etat.croissancePct > 0 ? ' ' + t('Montant de la première année, puis en hausse de {0} par an.', [fmtPct(calc.etat.croissancePct)]) : '');
+    ui.objectif = o.versement;
+    btn.hidden = Math.abs(o.versement - calc.etat.versement) < 0.0005;
   }
 
   /* ===================================================================
@@ -520,12 +599,19 @@
   function lignesPrevoyance(p) {
     return [
       [t('Capital au terme (scénario médian)'), fmtTND(p.capital)],
-      [t('Rente annuelle estimée pendant {0} ans', [p.dureeRente]), fmtTND(p.rente.annuelle), 'fort'],
-      [t('Soit par mois'), fmtTND(p.rente.mensuelle)],
+      p.retraite
+        ? [t('Rente annuelle estimée à partir de {0} ans, pendant {1} ans', [p.retraite.depart, p.dureeRente]), fmtTND(p.rente.annuelle), 'fort']
+        : [t('Rente annuelle estimée pendant {0} ans', [p.dureeRente]), fmtTND(p.rente.annuelle), 'fort'],
+      [t('Soit par mois'), fmtTND(p.rente.mensuelle)]
+    ].concat(p.revenu ? [
+      [t('Pension de retraite mensuelle estimée'), fmtTND(p.revenu.pension)],
+      [t('Revenu mensuel à la retraite (pension + rente)'), fmtTND(p.revenu.total), 'fort'],
+      [t('Part du revenu apportée par la rente'), fmtPct(p.revenu.partRente)]
+    ] : []).concat([
       [t('Capital acquis en cas de décès en année {0}', [p.deces.annee]), fmtTND(p.deces.capitalAcquis)],
       [t('Versements cumulés à cette date'), fmtTND(p.deces.totalVerse)],
       [t('Capital versé aux bénéficiaires') + ' (' + t({ acquis: 'capital acquis', verses: 'versements remboursés', garanti: 'capital garanti' }[p.deces.origine]) + ')', fmtTND(p.deces.capitalDeces), 'fort']
-    ];
+    ]);
   }
 
   function majPrevoyance() {
@@ -536,19 +622,22 @@
     bornerAnnee('v-deces-annee', duree);
     var dr = nombre('v-duree-rente'), tx = nombre('v-taux-rente'), an = nombre('v-deces-annee');
     var g = lire('v-garanti');
+    var pension = lire('v-pension');
     var err = '';
     if (!(dr >= 1 && dr <= 50 && Math.floor(dr) === dr)) err = t('La durée de la rente doit être un nombre entier entre 1 et 50 ans.');
     else if (!(tx >= 0 && tx <= 20)) err = t('Le taux technique doit être compris entre 0 et 20 %.');
     else if (!(an >= 1 && an <= duree && Math.floor(an) === an)) err = t('L\'année du décès doit être un nombre entier entre 1 et {0}.', [duree]);
-    else if (!isFinite(g.v)) err = t('Saisissez un montant valide (ex. 500).');
+    else if (!isFinite(g.v) || !isFinite(pension.v)) err = t('Saisissez un montant valide (ex. 500).');
     $('prev-err').textContent = err;
     if (err) { $('prev-lignes').innerHTML = ''; return; }
     var p = {
       capital: calc.med.capitalFinal,
       dureeRente: dr, tauxRente: tx,
       rente: Prev.renteEstimee(calc.med.capitalFinal, dr, tx),
-      deces: Prev.capitalDeces(calc.med.annees, an, g.v)
+      deces: Prev.capitalDeces(calc.med.annees, an, g.v),
+      retraite: ui.retraite
     };
+    p.revenu = pension.v > 0 ? Conseil.revenuRetraite(pension.v, p.rente.mensuelle) : null;
     ui.prevoyance = p;
     $('prev-lignes').innerHTML = lignesPrevoyance(p).map(function (l) { return ligne(l[0], l[1], l[2]); }).join('');
   }
@@ -575,6 +664,16 @@
     $('lien-partage').value = lien;
     var qr = matriceQR(lien);
     $('qr-lien').innerHTML = qr ? qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }) : '';
+    var message = t('Voici votre simulation d\'assurance vie et de CEA : {0}', [lien]);
+    $('envoi-whatsapp').href = 'https://wa.me/?text=' + encodeURIComponent(message);
+    $('envoi-email').href = 'mailto:?subject=' + encodeURIComponent(t('Votre simulation d\'assurance vie et de CEA')) + '&body=' + encodeURIComponent(message + '\n\n' + t('Simulation indicative, non contractuelle.'));
+  }
+
+  /* Partage natif du PDF (téléphones et navigateurs qui le permettent) */
+  function partagePdfPossible() {
+    try {
+      return !!(navigator.canShare && window.File && navigator.canShare({ files: [new File(['%PDF'], 'test.pdf', { type: 'application/pdf' })] }));
+    } catch (e) { return false; }
   }
 
   function copier(texte) {
@@ -609,6 +708,65 @@
     };
   }
 
+  /* Agence : coordonnées et logo mémorisés sur cet appareil (localStorage), jamais transmis */
+  var CHAMPS_AGENCE = { nom: 'ag-nom', tel: 'ag-tel', email: 'ag-email', adresse: 'ag-adresse' };
+  var agence = { nom: '', tel: '', email: '', adresse: '', logo: null, conseiller: '' };
+
+  function chargerAgence() {
+    try {
+      var d = JSON.parse(localStorage.getItem('agence') || 'null');
+      if (d && typeof d === 'object') {
+        Object.keys(CHAMPS_AGENCE).concat(['conseiller']).forEach(function (k) { if (typeof d[k] === 'string') agence[k] = d[k]; });
+        if (d.logo && typeof d.logo.src === 'string' && /^data:image\/(png|jpeg);base64,/.test(d.logo.src)) agence.logo = d.logo;
+      }
+    } catch (e) {}
+    Object.keys(CHAMPS_AGENCE).forEach(function (k) { $(CHAMPS_AGENCE[k]).value = agence[k]; });
+    if (agence.conseiller && !$('c-conseiller').value) $('c-conseiller').value = agence.conseiller;
+    afficherLogo();
+  }
+
+  function sauverAgence() {
+    Object.keys(CHAMPS_AGENCE).forEach(function (k) { agence[k] = $(CHAMPS_AGENCE[k]).value.trim(); });
+    agence.conseiller = $('c-conseiller').value.trim();
+    try { localStorage.setItem('agence', JSON.stringify(agence)); return true; } catch (e) { return false; }
+  }
+
+  function afficherLogo() {
+    var ap = $('ag-logo-apercu');
+    ap.innerHTML = agence.logo ? '<img alt="" src="' + agence.logo.src + '">' : '';
+    ap.hidden = !agence.logo;
+    $('ag-logo-retirer').hidden = !agence.logo;
+  }
+
+  /* Le logo est redimensionné (320 × 160 au plus) et converti en PNG ou JPEG pour le PDF */
+  function lireLogo(fichier) {
+    if (!fichier || !/^image\/(png|jpeg|webp)$/.test(fichier.type)) { toast(t('Choisissez une image PNG ou JPEG.'), 'erreur'); return; }
+    var lecteur = new FileReader();
+    lecteur.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, 320 / img.width, 160 / img.height);
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.width * k));
+        c.height = Math.max(1, Math.round(img.height * k));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        var png = fichier.type !== 'image/jpeg';
+        agence.logo = { src: c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.9), format: png ? 'PNG' : 'JPEG', l: c.width, h: c.height };
+        if (!sauverAgence()) { agence.logo = null; toast(t('Logo trop lourd pour être mémorisé.'), 'erreur'); }
+        else toast(t('Logo enregistré : il figurera sur le rapport PDF.'));
+        afficherLogo();
+      };
+      img.onerror = function () { toast(t('Choisissez une image PNG ou JPEG.'), 'erreur'); };
+      img.src = lecteur.result;
+    };
+    lecteur.readAsDataURL(fichier);
+  }
+
+  function agencePourRapport() {
+    if (!agence.nom && !agence.logo) return null;
+    return { nom: agence.nom, tel: agence.tel, email: agence.email, adresse: agence.adresse, logo: agence.logo };
+  }
+
   /* Numéro de dossier : la référence saisie, sinon un numéro stable tiré des paramètres */
   function numeroDossier(lien, ref) {
     if (ref) return ref;
@@ -631,13 +789,15 @@
       provisoire: !!sim.regles.provisoire,
       dossier: numeroDossier(lien, meta.ref),
       client: meta.client, conseiller: meta.conseiller,
+      agence: agencePourRapport(),
       lien: lien, qr: matriceQR(lien),
       calc: calc,
       hypotheses: [
         [t('Revenu brut annuel imposable'), fmtTND(e.revenu)],
         [t('Situation familiale'), (e.chef ? t('Chef de famille') : t('Non chef de famille')) + ' · ' + t('{0} enfant(s), {1} infirme(s), {2} étudiant(s), {3} parent(s)', [e.enfants, e.infirmes, e.etudiants, e.parents])],
         [t('Investissement'), fmtTND(calc.investissement) + ' ' + t('par an') + ' (' + fmtTND(e.versement) + ' ' + t(PERIODES[e.frequence]) + ')']
-      ],
+      ].concat(ui.retraite ? [[t('Retraite'), t('Âge actuel {0} ans, départ à {1} ans', [ui.retraite.age, ui.retraite.depart])]] : []),
+      comparatif: calc.actif ? elementsComparatif(calc).map(function (x) { return [x[0], fmtTND(x[1]), x[1]]; }) : null,
       deductions: lignesDeductions(sim, e),
       points: pointsEconomie(sim, calc.investissement),
       projection: calc.actif ? lignesProjection(calc) : null,
@@ -665,24 +825,31 @@
     $('er-hypotheses').textContent = t('Revenu brut annuel : {0} · Investissement : {1} par an ({2} {3})', [fmtTND(e.revenu), fmtTND(calc.investissement), fmtTND(e.versement), t(PERIODES[e.frequence])]);
   }
 
+  /* Génère le PDF : { blob, nom } ou null si jsPDF est indisponible ou en erreur */
+  function genererPdf() {
+    if (!window.RapportPDF || !window.jspdf) return null;
+    /* Les polices standard du PDF n'ont pas de glyphes arabes : le rapport est alors rédigé en français */
+    var langue = I18n.langue();
+    if (langue === 'ar') I18n.definir('fr');
+    try {
+      var d = donneesRapport();
+      return { blob: window.RapportPDF.generer(d), nom: 'simulation-' + d.dossier.replace(/[^\w-]+/g, '_') + '.pdf' };
+    } catch (err) {
+      if (window.console) console.error(err);
+      return null;
+    } finally {
+      I18n.definir(langue);
+    }
+  }
+
   function exporterPdf() {
     actualiser();
     if (!ui.calc || !(ui.calc.etat.revenu > 0)) { toast(t('Saisissez d\'abord votre revenu brut annuel imposable.'), 'erreur'); $('revenue').focus(); return; }
-    if (window.RapportPDF && window.jspdf) {
-      /* Les polices standard du PDF n'ont pas de glyphes arabes : le rapport est alors rédigé en français */
-      var langue = I18n.langue();
-      if (langue === 'ar') I18n.definir('fr');
-      try {
-        var d = donneesRapport();
-        var blob = window.RapportPDF.generer(d);
-        I18n.definir(langue);
-        telecharger('simulation-' + d.dossier.replace(/[^\w-]+/g, '_') + '.pdf', blob, 'application/pdf');
-        toast(t('Rapport PDF téléchargé.'));
-        return;
-      } catch (err) {
-        I18n.definir(langue);
-        if (window.console) console.error(err);
-      }
+    var r = genererPdf();
+    if (r) {
+      telecharger(r.nom, r.blob, 'application/pdf');
+      toast(t('Rapport PDF téléchargé.'));
+      return;
     }
     preparerRapport();
     window.print();
@@ -722,6 +889,13 @@
     ui.selection = ui.selection.filter(function (id) { return liste.some(function (e) { return e.id === id; }); });
     $('port-vide').hidden = liste.length > 0;
     $('port-export').disabled = !liste.length;
+    $('port-sauver').disabled = !liste.length;
+    var st = Conseil.statistiques(liste.map(resumeActuel));
+    $('port-stats').hidden = !liste.length;
+    $('st-nombre').textContent = String(st.nombre);
+    $('st-epargne').textContent = fmtTND(st.epargneAnnuelle);
+    $('st-economie').textContent = fmtTND(st.economieAnnuelle);
+    $('st-capital').textContent = fmtTND(st.capitalMedian);
     $('port-vider').disabled = !liste.length;
     $('port-liste').innerHTML = liste.map(function (enr) {
       var r = enr.resume || {};
@@ -792,6 +966,21 @@
     }).catch(function () { toast(t('Enregistrement impossible.'), 'erreur'); });
   }
 
+  function restaurer(fichier) {
+    if (!fichier || !depot) return;
+    var lecteur = new FileReader();
+    lecteur.onload = function () {
+      var r = Conseil.importerSauvegarde(String(lecteur.result));
+      if (r.erreur || !r.simulations.length) { toast(t('Fichier de sauvegarde non reconnu.'), 'erreur'); return; }
+      r.simulations.reduce(function (p, enr) { return p.then(function () { return depot.ajouter(enr); }); }, Promise.resolve())
+        .then(rafraichirPortefeuille)
+        .then(function () { toast(t('{0} simulation(s) restaurée(s).', [r.simulations.length])); })
+        .catch(function () { toast(t('Enregistrement impossible.'), 'erreur'); });
+    };
+    lecteur.onerror = function () { toast(t('Fichier de sauvegarde non reconnu.'), 'erreur'); };
+    lecteur.readAsText(fichier);
+  }
+
   function exporterPortefeuille() {
     var cols = COLONNES.map(function (c) { return [t(c[0]), c[1]]; });
     var liste = ui.portefeuille.map(function (e) { return Object.assign({}, e, { resume: resumeActuel(e) }); });
@@ -830,7 +1019,7 @@
     majCurseur();
     planifier();
   });
-  ['revenue', 'investment-amount-period', 'inv-cible', 'v-garanti'].forEach(function (id) {
+  ['revenue', 'investment-amount-period', 'inv-cible', 'v-garanti', 'v-pension', 'obj-capital'].forEach(function (id) {
     $(id).addEventListener('blur', function () {
       var r = Saisie.lireNombre(this.value);
       /* Une saisie ambiguë (« 45,000 ») est laissée telle quelle pour que l'avertissement reste visible */
@@ -839,12 +1028,18 @@
   });
   $('investment-amount-period').addEventListener('input', planifier);
   $('inv-cible').addEventListener('input', planifier);
+  ['obj-capital', 'p-age', 'p-depart'].forEach(function (id) { $(id).addEventListener('input', planifier); });
+  $('p-retraite').addEventListener('change', function () {
+    calculateAndDisplay();
+    if (this.checked && !$('p-age').value) $('p-age').focus();
+  });
+  $('obj-appliquer').addEventListener('click', function () { actualiser(); if (ui.objectif > 0) appliquerMontantPeriode(ui.objectif); });
   champsHypotheses.forEach(function (id) { $(id).addEventListener('input', planifier); });
   $('p-reinvest').addEventListener('change', calculateAndDisplay);
   ['r-annee', 'r-part', 'r-penalite'].forEach(function (id) {
     $(id).addEventListener('input', function () { if (id === 'r-annee') this.dataset.touche = '1'; majRachat(); });
   });
-  ['v-duree-rente', 'v-taux-rente', 'v-deces-annee', 'v-garanti'].forEach(function (id) {
+  ['v-duree-rente', 'v-taux-rente', 'v-deces-annee', 'v-garanti', 'v-pension'].forEach(function (id) {
     $(id).addEventListener('input', function () { if (id === 'v-deces-annee') this.dataset.touche = '1'; majPrevoyance(); });
   });
 
@@ -944,6 +1139,30 @@
   });
   $('lien-partage').addEventListener('focus', function () { this.select(); });
   $('enregistrer').addEventListener('click', enregistrer);
+  $('envoi-pdf').hidden = !partagePdfPossible();
+  $('envoi-pdf').addEventListener('click', function () {
+    actualiser();
+    var r = genererPdf();
+    if (!r) { toast(t('Envoi impossible depuis ce navigateur : téléchargez le PDF.'), 'erreur'); return; }
+    navigator.share({ files: [new File([r.blob], r.nom, { type: 'application/pdf' })], title: t('Rapport de simulation'), text: $('lien-partage').value })
+      .catch(function (e) { if (!e || e.name !== 'AbortError') toast(t('Envoi impossible depuis ce navigateur : téléchargez le PDF.'), 'erreur'); });
+  });
+
+  /* Infobulles d'explication */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.aide');
+    if (!b) return;
+    var cible = $(b.getAttribute('aria-controls'));
+    var ouvert = b.getAttribute('aria-expanded') !== 'true';
+    b.setAttribute('aria-expanded', String(ouvert));
+    cible.hidden = !ouvert;
+  });
+
+  /* Agence */
+  Object.keys(CHAMPS_AGENCE).forEach(function (k) { $(CHAMPS_AGENCE[k]).addEventListener('input', sauverAgence); });
+  $('c-conseiller').addEventListener('input', sauverAgence);
+  $('ag-logo').addEventListener('change', function () { lireLogo(this.files && this.files[0]); this.value = ''; });
+  $('ag-logo-retirer').addEventListener('click', function () { agence.logo = null; sauverAgence(); afficherLogo(); toast(t('Logo retiré.')); });
   $('export-projection').addEventListener('click', function () {
     actualiser();
     var c = ui.calc;
@@ -994,6 +1213,11 @@
     $('port-comparaison').scrollIntoView({ behavior: mouvementReduit.matches ? 'auto' : 'smooth', block: 'nearest' });
   });
   $('port-export').addEventListener('click', exporterPortefeuille);
+  $('port-sauver').addEventListener('click', function () {
+    telecharger('portefeuille-sauvegarde-' + dateIso() + '.json', Conseil.exporterSauvegarde(ui.portefeuille), 'application/json');
+    toast(t('Sauvegarde téléchargée : conservez ce fichier pour restaurer le portefeuille sur un autre appareil.'));
+  });
+  $('port-restaurer').addEventListener('change', function () { restaurer(this.files && this.files[0]); this.value = ''; });
   $('port-vider').addEventListener('click', function () {
     if (!depot || !window.confirm(t('Supprimer toutes les simulations enregistrées dans ce navigateur ?'))) return;
     depot.vider().then(function () { ui.selection = []; $('port-comparaison').hidden = true; return rafraichirPortefeuille(); }).then(function () { toast(t('Portefeuille vidé.')); });
@@ -1034,6 +1258,7 @@
   /* Démarrage */
   $('annee').textContent = new Date().getFullYear();
   initialiserAnnees();
+  chargerAgence();
   majMetaTheme();
   majCurseur();
   majSteppers();

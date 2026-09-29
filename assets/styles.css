@@ -591,6 +591,71 @@ table.comparaison { min-width: 560px; }
 
 .toast.toast-erreur .t-ico { background: var(--red); }
 
+/* Infobulles d'explication */
+.aide {
+  appearance: none; display: inline-grid; place-items: center; width: 26px; height: 26px; margin-inline-start: auto; flex: none;
+  border-radius: 99px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); cursor: pointer;
+  transition: color var(--t-fast), background-color var(--t-fast), border-color var(--t-fast), transform var(--t-fast) var(--ease);
+}
+.aide:hover { color: var(--primary); border-color: var(--primary); }
+.aide[aria-expanded="true"] { color: #fff; background: var(--grad-main); border-color: transparent; }
+.aide:active { transform: scale(0.92); }
+.s-head .aide { width: 22px; height: 22px; margin-inline-start: 4px; color: #fff; background: rgba(255, 255, 255, 0.2); border-color: rgba(255, 255, 255, 0.35); }
+.aide-texte {
+  margin: -6px 0 16px; padding: 12px 14px; border-radius: 12px; font-size: 13px; line-height: 1.55; color: var(--text-2);
+  background: var(--primary-soft); border-inline-start: 3px solid var(--primary); animation: entrer var(--t) var(--ease) both;
+}
+.suggest .aide-texte { position: relative; z-index: 1; margin: 10px 0 0; color: #fff; background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.6); }
+
+/* Agence */
+.agence-champs { padding: 4px 14px 0; }
+#agence { margin-top: 16px; }
+.logo-ligne { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.logo-apercu { display: grid; place-items: center; width: 64px; height: 44px; padding: 4px; border-radius: 10px; background: #fff; border: 1px solid var(--border); }
+.logo-apercu img { max-width: 100%; max-height: 100%; }
+label.btn { cursor: pointer; }
+label.btn:focus-within, .sr-only:focus-visible + .btn { outline: 3px solid var(--ring); outline-offset: 2px; }
+
+/* Envoi */
+.envoi { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; text-decoration: none; }
+.envoi .btn { text-decoration: none; }
+
+/* Retraite et objectif de capital */
+.retraite { margin-top: 12px; }
+.field.verrouille .input-wrap { background: var(--primary-soft); }
+.field.verrouille input { color: var(--primary); cursor: default; }
+.objectif { margin-top: 16px; padding: 16px; border-radius: var(--radius-lg); background: var(--surface-2); border: 1.5px dashed var(--border-strong); transition: border-color var(--t) var(--ease); }
+.objectif .input-wrap { background: var(--surface); }
+.objectif.ok { border-color: color-mix(in srgb, var(--green) 60%, transparent); border-style: solid; }
+.objectif.ko { border-color: color-mix(in srgb, var(--amber) 70%, transparent); border-style: solid; }
+.objectif.ok .inv-res { color: var(--good); font-weight: 700; }
+#obj-appliquer { margin-top: 10px; }
+
+/* Comparatif des placements */
+.comparatif { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.sous-titre { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+.cmp-ligne { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: baseline; margin-bottom: 12px; }
+.cmp-lib { font-size: 13px; color: var(--text-2); }
+.cmp-val { font-size: 14px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cmp-trk { grid-column: 1 / -1; height: 10px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.cmp-fill { display: block; height: 100%; border-radius: 99px; transition: width 700ms var(--ease); }
+.cmp-fill.c1 { background: var(--grad-green); }
+.cmp-fill.c2 { background: linear-gradient(90deg, #4f46e5, #7c3aed); }
+.cmp-fill.c3 { background: var(--grad-warm); }
+.cmp-fill.c4 { background: repeating-linear-gradient(90deg, var(--muted) 0 6px, transparent 6px 10px); opacity: 0.6; }
+:root[dir="rtl"] .cmp-val { direction: ltr; unicode-bidi: isolate; }
+
+/* Tableau de bord du portefeuille */
+.port-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.stat { padding: 12px 14px; border-radius: 14px; background: var(--primary-soft); min-width: 0; }
+.stat span { display: block; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); }
+.stat b { display: block; margin-top: 4px; font-family: var(--font-display); font-size: 17px; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+:root[dir="rtl"] .stat b { direction: ltr; text-align: right; }
+
+/* Questions fréquentes */
+.faq { margin-top: 22px; }
+.faq .avance + .avance { margin-top: 8px; }
+
 /* Arabe : lecture de droite à gauche ; montants et graphiques restent de gauche à droite */
 :root[dir="rtl"] body { font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", "Geeza Pro", var(--font); }
 :root[dir="rtl"] h1, :root[dir="rtl"] h2, :root[dir="rtl"] h3 { font-family: "Segoe UI", Tahoma, "Noto Sans Arabic", "Geeza Pro", var(--font-display); letter-spacing: 0; }
@@ -603,6 +668,7 @@ table.comparaison { min-width: 560px; }
 :root[dir="rtl"] .tranches td:first-child { text-align: start; }
 
 @media (max-width: 760px) {
+  .port-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .topbar-in { flex-wrap: wrap; row-gap: 8px; }
   .top-actions { flex: 1 1 100%; min-width: 0; margin-inline-start: 0; justify-content: flex-end; }
   .select-annee { min-width: 0; max-width: 150px; text-overflow: ellipsis; }
@@ -634,7 +700,7 @@ table.comparaison { min-width: 560px; }
   @page { margin: 14mm; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   body { background: #fff !important; color: #121631; font-size: 12px; }
-  body::before, .topbar, .hero, .barre-rapport, .col-saisie, .toasts, .btn, .empty, .portefeuille, .avance, .field-warn { display: none !important; }
+  body::before, .topbar, .hero, .barre-rapport, .col-saisie, .toasts, .btn, .empty, .portefeuille, .faq, .avance, .field-warn, .aide, .aide-texte, .objectif, .retraite, #p-retraite, .case { display: none !important; }
   .page { max-width: none; padding: 0; }
   .layout { display: block; margin-top: 0; }
   .col-resultats { display: block; }

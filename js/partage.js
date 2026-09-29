@@ -12,6 +12,7 @@
     u: ['etudiants', 'int', 0, 99], p: ['parents', 'int', 0, 2], f: ['frequence', 'freq'], v: ['versement', 'nb', 0, 1e9],
     d: ['dureeAns', 'int', 1, 40], y: ['rendementPct', 'nb', 0, 50], x: ['fraisPct', 'nb', 0, 20], k: ['comparPct', 'nb', 0, 50],
     n: ['reinvestir', 'bool'], s: ['ecartPct', 'nb', 0, 20], g: ['croissancePct', 'nb', 0, 20], l: ['inflationPct', 'nb', 0, 30],
+    t: ['impotInteretsPct', 'nb', 0, 50], q: ['ageActuel', 'int', 0, 80], o: ['ageDepart', 'int', 0, 80],
     a: ['annee', 'annee']
   };
 

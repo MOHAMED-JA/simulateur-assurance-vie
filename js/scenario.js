@@ -17,7 +17,8 @@
       revenu: 0, chef: false, enfants: 0, infirmes: 0, etudiants: 0, parents: 0,
       frequence: 'Mensuel', versement: 0,
       dureeAns: 10, rendementPct: 6, fraisPct: 1, comparPct: 4, reinvestir: false,
-      ecartPct: 2, croissancePct: 0, inflationPct: 0
+      ecartPct: 2, croissancePct: 0, inflationPct: 0, impotInteretsPct: 20,
+      ageActuel: 0, ageDepart: 0
     };
   }
 
@@ -30,6 +31,7 @@
     if (!isFinite(e.ecartPct) || e.ecartPct < 0 || e.ecartPct > 20) return { code: 'ecart' };
     if (!isFinite(e.croissancePct) || e.croissancePct < 0 || e.croissancePct > 20) return { code: 'croissance' };
     if (!isFinite(e.inflationPct) || e.inflationPct < 0 || e.inflationPct > 30) return { code: 'inflation' };
+    if (e.impotInteretsPct !== undefined && (!isFinite(e.impotInteretsPct) || e.impotInteretsPct < 0 || e.impotInteretsPct > 50)) return { code: 'impotInterets' };
     return null;
   }
 
@@ -75,6 +77,9 @@
     res.classique = classique;
     res.effectif = Proj.rendementEffectif(p);
     res.avantage = valeurTotale - classique;
+    /* Même placement classique après impôt sur les intérêts (prélevé chaque année sur le rendement) */
+    res.impotInteretsPct = e.impotInteretsPct || 0;
+    res.classiqueNet = Proj.placementClassique(p, e.comparPct * (1 - res.impotInteretsPct / 100));
     return res;
   }
 

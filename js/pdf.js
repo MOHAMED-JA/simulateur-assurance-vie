@@ -64,9 +64,20 @@
       doc.lines([[1.6 * k, 1.6 * k], [3 * k, -3.2 * k]], x + 5.8 * k, yy + 8 * k, [1, 1], 'S', false);
     }
 
+    /* Logo de l'agence, centré dans un carré blanc arrondi */
+    function logoAgence(x, yy, taille) {
+      var lg = d.agence.logo;
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x, yy, taille, taille, 3, 3, 'F');
+      var marge = 1.6, cote = taille - 2 * marge;
+      var k = Math.min(cote / lg.l, cote / lg.h);
+      var w = lg.l * k, h = lg.h * k;
+      try { doc.addImage(lg.src, lg.format, x + (taille - w) / 2, yy + (taille - h) / 2, w, h); } catch (e) { logo(x, yy, taille); }
+    }
+
     function enteteComplete() {
       degrade(0, 0, W, 36);
-      logo(M, 9, 17);
+      if (d.agence && d.agence.logo) logoAgence(M, 9, 17); else logo(M, 9, 17);
       police(17, true, [255, 255, 255]);
       doc.text(txt(t('Rapport de simulation')), M + 22, 15.5);
       police(9.5, false, [255, 255, 255]);
@@ -275,6 +286,18 @@
     var calc = d.calc, sim = calc.sim;
     enteteComplete();
 
+    if (d.agence && (d.agence.nom || d.agence.tel || d.agence.email || d.agence.adresse)) {
+      police(9, false, C.texte);
+      var coords = [d.agence.tel, d.agence.email, d.agence.adresse].filter(Boolean).join('   ·   ');
+      var lignesAg = coords ? doc.splitTextToSize(txt(coords), W - 2 * M - 8) : [];
+      var hAg = 7 + lignesAg.length * 4.2 + (d.agence.nom ? 0 : -4);
+      couleur('setFillColor', C.fond);
+      doc.roundedRect(M, y - 2, W - 2 * M, hAg + 2, 2, 2, 'F');
+      var yy = y + 3.4;
+      if (d.agence.nom) { police(10, true, C.indigo); doc.text(txt(d.agence.nom), M + 4, yy); yy += 4.6; }
+      if (lignesAg.length) { police(8.5, false, C.texte); doc.text(lignesAg, M + 4, yy); }
+      y += hAg + 4;
+    }
     if (d.client || d.conseiller) {
       couleur('setFillColor', C.fond);
       doc.roundedRect(M, y - 2, W - 2 * M, 10, 2, 2, 'F');
@@ -352,6 +375,26 @@
         series: series, legende: legende
       });
       d.projection.forEach(function (l) { rangee(l[0], l[1], l[2]); });
+      if (d.comparatif) {
+        titre(t('Comparatif des placements au terme'));
+        var maxCmp = Math.max.apply(null, d.comparatif.map(function (c) { return c[2]; })) || 1;
+        var couleursCmp = [C.vert, C.indigo, C.orange, C.gris];
+        d.comparatif.forEach(function (c, i) {
+          police(8.5, false, C.texte);
+          var lib = doc.splitTextToSize(txt(c[0]), W - 2 * M - 40);
+          place(lib.length * 3.8 + 8);
+          doc.text(lib, M, y + 3);
+          police(9, true, C.encre);
+          doc.text(txt(c[1]), W - M, y + 3, { align: 'right' });
+          var yb = y + lib.length * 3.8 + 1;
+          couleur('setFillColor', C.fond);
+          doc.roundedRect(M, yb, W - 2 * M, 3.2, 1.6, 1.6, 'F');
+          couleur('setFillColor', couleursCmp[i % couleursCmp.length]);
+          var lb = Math.max(3.2, (W - 2 * M) * Math.max(0, c[2]) / maxCmp);
+          doc.roundedRect(M, yb, lb, 3.2, 1.6, 1.6, 'F');
+          y = yb + 6.5;
+        });
+      }
     }
 
     if (d.rachat) {
@@ -388,7 +431,9 @@
       doc.setLineWidth(0.3);
       doc.line(M, H - 12, W - M, H - 12);
       police(7.5, false, C.gris);
-      doc.text(txt(t('Simulation indicative, non contractuelle') + ' · ' + t('Dossier') + ' ' + d.dossier), M, H - 7.5);
+      var pied = t('Simulation indicative, non contractuelle') + ' · ' + t('Dossier') + ' ' + d.dossier;
+      if (d.agence && d.agence.nom) pied = d.agence.nom.slice(0, 50) + ' · ' + pied;
+      doc.text(txt(pied), M, H - 7.5);
       doc.text(txt(t('Page {0} / {1}', [p, n])), W - M, H - 7.5, { align: 'right' });
     }
     doc.setProperties({ title: txt(t('Rapport de simulation') + ' ' + d.dossier), subject: txt(t('Assurance vie et CEA')), creator: 'Simulateur Assurance Vie et CEA' });

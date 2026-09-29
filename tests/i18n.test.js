@@ -40,7 +40,7 @@ test('toutes les chaînes de l\'interface et du PDF ont une traduction anglaise 
   const cles = [...clesHtml(), ...clesJs('js/interface.js'), ...clesJs('js/pdf.js')];
   Object.values(Baremes.annees).forEach((r) => { cles.push(r.libelle, r.source); });
   const manquantes = [...new Set(cles)].filter((c) => !I18n.connu(c));
-  assert.deepEqual(manquantes, []);
+  assert.equal(manquantes.length, 0, 'Traductions manquantes dans js/i18n.js :\n' + manquantes.join('\n'));
 });
 
 test('chaque traduction a ses deux langues et garde les mêmes paramètres', () => {
