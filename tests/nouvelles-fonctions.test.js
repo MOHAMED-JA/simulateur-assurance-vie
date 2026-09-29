@@ -162,7 +162,7 @@ test('capital décès : plus élevé entre capital acquis, versements et capital
 
 /* ---------- Partage ---------- */
 test('lien de partage : aller-retour sans perte', () => {
-  const e = Object.assign(base(), { chef: true, enfants: 2, parents: 1, frequence: 'Trimestriel', croissancePct: 3.5, reinvestir: true, annee: '2026' });
+  const e = Object.assign(base(), { chef: true, enfants: 2, parents: 1, frequence: 'Trimestriel', croissancePct: 3.5, reinvestir: true, annee: '2025' });
   assert.deepEqual(Pa.decoder(Pa.encoder(e)), e);
   assert.ok(Pa.lien('https://exemple.tn/app/?x=1#ancien', e).startsWith('https://exemple.tn/app/?x=1#r=45000'));
 });
@@ -211,9 +211,12 @@ test('portefeuille : enregistrement autonome et sans référence à l\'état d\'
 });
 
 /* ---------- Barèmes ---------- */
-test('le barème provisoire 2026 est signalé et cohérent', () => {
-  assert.equal(Baremes.annees['2026'].provisoire, true);
+test('un seul barème en vigueur : aucun barème provisoire', () => {
+  assert.deepEqual(Object.keys(Baremes.annees), ['2025']);
   assert.equal(Baremes.parDefaut, '2025');
   assert.ok(!Baremes.annees['2025'].provisoire);
-  assert.equal(M.simuler({ revenu: 45000, investissement: 0 }, '2026').impotAvant, M.simuler({ revenu: 45000, investissement: 0 }, '2025').impotAvant);
+});
+
+test('lien de partage : une année absente du barème est ignorée', () => {
+  assert.deepEqual(Pa.decoder('#a=2026&r=45000'), { revenu: 45000 });
 });

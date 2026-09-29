@@ -16,7 +16,7 @@ Simulateur d'économie d'impôt sur le revenu (Tunisie, montants en TND) grâce 
 - **Rapport PDF** (jsPDF) : en-tête et logo, numéro de dossier, indicateurs, tableaux, graphiques, rachat, prévoyance, QR code, mentions légales, pages numérotées. En arabe, le rapport est rédigé en français (les polices standard du PDF n'ont pas de glyphes arabes). Si jsPDF ne se charge pas, la boîte d'impression du navigateur prend le relais.
 - **Mode conseiller et portefeuille** : nom du client, du conseiller et référence du dossier sur le rapport ; simulations enregistrées dans le navigateur (IndexedDB, 200 au plus), rouvertes en un clic, **comparées côte à côte** (2 ou 3, meilleure valeur signalée par ★) et exportées en Excel (CSV).
 - **Français, anglais et arabe** (lecture de droite à gauche) ; la langue du navigateur est proposée par défaut. Les montants gardent le format tunisien dans toutes les langues.
-- **Barème 2026 préparé** (provisoire, identique à 2025) : le sélecteur d'année apparaît dès qu'il y a plusieurs barèmes.
+- Barème paramétrable par année : un sélecteur d'année apparaît dès qu'il y a plusieurs barèmes (la loi de finances 2026 n'a pas modifié le barème : un seul est affiché).
 - **Application installable et hors ligne** (PWA) : utilisable en agence sans réseau ; en ligne, la dernière version publiée est toujours servie.
 - Thème clair / sombre, adapté au mobile (dès 320 px de large).
 
@@ -49,7 +49,7 @@ e2e/                    parcours de bout en bout (Playwright)
 
 ### Ajouter une année fiscale
 
-Dans `js/baremes.js`, dupliquer l'entrée `'2025'` sous `annees`, adapter les tranches (contiguës : chaque `min` égale le `max` précédent), les déductions et `sortie`. L'entrée `'2026'` est marquée `provisoire: true` : une fois la loi de finances 2026 confirmée, corriger ses valeurs, retirer `provisoire` et le « (provisoire) » du libellé, et passer `parDefaut` à `'2026'`. Penser à ajouter la traduction du nouveau libellé et de la source dans `js/i18n.js` (le test des traductions le signale).
+Dans `js/baremes.js`, dupliquer l'entrée `'2025'` sous `annees`, adapter les tranches (contiguës : chaque `min` égale le `max` précédent), les déductions et `sortie`. Changer `parDefaut` pour proposer la nouvelle année ; `provisoire: true` affiche un avertissement tant que le texte n'est pas confirmé. Penser à ajouter la traduction du nouveau libellé et de la source dans `js/i18n.js` (le test des traductions le signale).
 
 ### Ajouter ou modifier un texte
 

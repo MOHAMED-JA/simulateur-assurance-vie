@@ -322,9 +322,7 @@
 
     /* ---------- Barèmes ---------- */
     'Loi de finances 2025': ['2025 Finance Act', 'قانون المالية لسنة 2025'],
-    'Loi de finances 2026 (provisoire)': ['2026 Finance Act (provisional)', 'قانون المالية لسنة 2026 (مؤقت)'],
-    'Paramètres repris de la version précédente du simulateur ; à confirmer avec le texte officiel (Code de l\'IRPP et de l\'IS).': ['Parameters carried over from the previous version of the simulator; to be confirmed against the official text (Personal Income Tax and Corporate Tax Code).', 'معايير مأخوذة من النسخة السابقة للمحاكي؛ يجب التثبت منها في النص الرسمي (مجلة الضريبة على دخل الأشخاص الطبيعيين والضريبة على الشركات).'],
-    'Barème PROVISOIRE : valeurs identiques à 2025 en attendant la confirmation du texte officiel de la loi de finances 2026.': ['PROVISIONAL scale: same values as 2025 pending confirmation of the official text of the 2026 Finance Act.', 'جدول مؤقت: نفس قيم 2025 في انتظار تأكيد النص الرسمي لقانون المالية لسنة 2026.']
+    'Paramètres repris de la version précédente du simulateur ; à confirmer avec le texte officiel (Code de l\'IRPP et de l\'IS).': ['Parameters carried over from the previous version of the simulator; to be confirmed against the official text (Personal Income Tax and Corporate Tax Code).', 'معايير مأخوذة من النسخة السابقة للمحاكي؛ يجب التثبت منها في النص الرسمي (مجلة الضريبة على دخل الأشخاص الطبيعيين والضريبة على الشركات).']
   };
 
   var courante = 'fr';
