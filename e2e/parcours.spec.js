@@ -204,3 +204,25 @@ test('partage : liens WhatsApp et e-mail, infobulles et FAQ', async ({ page }) =
   await page.locator('.faq summary').first().click();
   await expect(page.locator('.faq details').first()).toHaveAttribute('open', '');
 });
+
+test('installer l\'application : invitation du navigateur ou explications', async ({ page }) => {
+  await expect(page.locator('#installer')).toBeVisible();
+  /* Sans invitation du navigateur : explications selon l'appareil */
+  await page.click('#installer');
+  await expect(page.locator('#install-aide')).toBeVisible();
+  await expect(page.locator('#install-texte')).not.toBeEmpty();
+  await page.click('#install-fermer');
+  await expect(page.locator('#install-aide')).toBeHidden();
+  /* Avec invitation (événement beforeinstallprompt simulé) : la fenêtre du navigateur s'ouvre */
+  await page.evaluate(() => {
+    const e = new Event('beforeinstallprompt', { cancelable: true });
+    e.prompt = () => { window.__invite = true; };
+    e.userChoice = Promise.resolve({ outcome: 'accepted' });
+    window.dispatchEvent(e);
+  });
+  await page.click('#installer');
+  expect(await page.evaluate(() => window.__invite)).toBe(true);
+  await expect(page.locator('#install-aide')).toBeHidden();
+  await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
+  await expect(page.locator('#installer')).toBeHidden();
+});

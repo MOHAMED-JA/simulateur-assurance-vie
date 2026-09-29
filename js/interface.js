@@ -1002,6 +1002,7 @@
     majBareme();
     calculateAndDisplay();
     afficherPortefeuille();
+    if (!$('install-aide').hidden) $('install-texte').textContent = explicationInstallation();
     if (!initial) toast(t('Langue : français'));
   }
 
@@ -1249,6 +1250,43 @@
 
   $('langue').addEventListener('change', function () { appliquerLangue(this.value); });
   window.addEventListener('hashchange', chargerDepuisLien);
+
+  /* Installation de l'application : invitation du navigateur (Chrome, Edge, Android),
+     sinon explications selon l'appareil (iPhone et iPad, Safari sur Mac, autres navigateurs) */
+  function estInstallee() {
+    return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  }
+  function explicationInstallation() {
+    var ua = navigator.userAgent || '';
+    var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (ios) return t('Sur iPhone ou iPad : touchez le bouton Partager de Safari, puis « Sur l\'écran d\'accueil ».');
+    if (/Safari/.test(ua) && !/Chrome|Chromium|Edg|Firefox/.test(ua)) return t('Sur Mac avec Safari : menu Fichier, puis « Ajouter au Dock ».');
+    if (/Android/.test(ua)) return t('Sur Android : ouvrez le menu ⋮ du navigateur, puis « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».');
+    return t('Ouvrez cette page avec Chrome ou Edge, puis cliquez sur l\'icône d\'installation dans la barre d\'adresse (ou menu ⋮, « Installer »).');
+  }
+  function majInstallation() { $('installer').hidden = estInstallee(); }
+  $('installer').addEventListener('click', function () {
+    var invitation = window.__invitationInstallation;
+    if (invitation) {
+      invitation.prompt();
+      invitation.userChoice.then(function (choix) {
+        window.__invitationInstallation = null;
+        if (choix && choix.outcome === 'accepted') toast(t('Installation en cours : l\'application sera disponible depuis votre écran d\'accueil.'));
+      }).catch(function () {});
+      return;
+    }
+    $('install-texte').textContent = explicationInstallation();
+    $('install-aide').hidden = false;
+  });
+  $('install-fermer').addEventListener('click', function () { $('install-aide').hidden = true; });
+  document.addEventListener('installation-possible', majInstallation);
+  window.addEventListener('appinstalled', function () {
+    window.__invitationInstallation = null;
+    $('installer').hidden = true;
+    $('install-aide').hidden = true;
+    toast(t('Application installée.'));
+  });
+  majInstallation();
 
   /* Mode hors ligne (PWA) : seulement en HTTPS ou en local */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {

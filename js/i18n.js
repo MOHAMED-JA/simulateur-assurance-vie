@@ -398,6 +398,15 @@
     'Mes données sont-elles envoyées quelque part ?': ['Is my data sent anywhere?', 'هل تُرسل بياناتي إلى أي جهة؟'],
     'Non. Tous les calculs se font dans votre navigateur. Le portefeuille et les coordonnées de l\'agence restent sur cet appareil ; le lien de partage ne contient que les paramètres de calcul, jamais les noms.': ['No. All calculations run in your browser. The portfolio and the agency details stay on this device; the share link contains only the calculation parameters, never names.', 'لا. تتم كل العمليات الحسابية في متصفحك. تبقى المحفظة وعنوان الوكالة على هذا الجهاز؛ ولا يتضمن رابط المشاركة سوى معايير الحساب، دون أي أسماء.'],
 
+    /* ---------- Installation ---------- */
+    'Installer l\'application': ['Install the app', 'تثبيت التطبيق'],
+    'Compris': ['Got it', 'فهمت'],
+    'Sur iPhone ou iPad : touchez le bouton Partager de Safari, puis « Sur l\'écran d\'accueil ».': ['On iPhone or iPad: tap Safari\'s Share button, then “Add to Home Screen”.', 'على iPhone أو iPad: المس زر المشاركة في Safari ثم «إضافة إلى الشاشة الرئيسية».'],
+    'Sur Mac avec Safari : menu Fichier, puis « Ajouter au Dock ».': ['On a Mac with Safari: File menu, then “Add to Dock”.', 'على Mac مع Safari: قائمة «ملف» ثم «إضافة إلى Dock».'],
+    'Sur Android : ouvrez le menu ⋮ du navigateur, puis « Installer l\'application » ou « Ajouter à l\'écran d\'accueil ».': ['On Android: open the browser\'s ⋮ menu, then “Install app” or “Add to Home screen”.', 'على Android: افتح قائمة ⋮ في المتصفح ثم «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».'],
+    'Ouvrez cette page avec Chrome ou Edge, puis cliquez sur l\'icône d\'installation dans la barre d\'adresse (ou menu ⋮, « Installer »).': ['Open this page in Chrome or Edge, then click the install icon in the address bar (or ⋮ menu, “Install”).', 'افتح هذه الصفحة في Chrome أو Edge ثم انقر على أيقونة التثبيت في شريط العنوان (أو القائمة ⋮، «تثبيت»).'],
+    'Installation en cours : l\'application sera disponible depuis votre écran d\'accueil.': ['Installing: the app will be available from your home screen.', 'جارٍ التثبيت: سيكون التطبيق متاحًا من شاشتك الرئيسية.'],
+    'Application installée.': ['App installed.', 'تم تثبيت التطبيق.'],
     /* ---------- Barèmes ---------- */
     'Loi de finances 2025': ['2025 Finance Act', 'قانون المالية لسنة 2025'],
     'Paramètres repris de la version précédente du simulateur ; à confirmer avec le texte officiel (Code de l\'IRPP et de l\'IS).': ['Parameters carried over from the previous version of the simulator; to be confirmed against the official text (Personal Income Tax and Corporate Tax Code).', 'معايير مأخوذة من النسخة السابقة للمحاكي؛ يجب التثبت منها في النص الرسمي (مجلة الضريبة على دخل الأشخاص الطبيعيين والضريبة على الشركات).']
