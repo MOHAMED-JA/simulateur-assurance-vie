@@ -25,5 +25,14 @@
     return { annee: ligne.annee, capitalAcquis: ligne.capital, totalVerse: ligne.verse, capitalDeces: capitalDecesTotal, origine: origine };
   }
 
-  return { renteEstimee: renteEstimee, capitalDeces: capitalDeces };
+  /* Sortie au terme : capital en une fois ou rente. Nombre d'années de rente pour récupérer le capital. */
+  function comparerSortie(capital, renteAnnuelle, dureeRente) {
+    var total = renteAnnuelle * dureeRente;
+    return {
+      capital: capital, renteAnnuelle: renteAnnuelle, totalRentes: total, supplement: total - capital,
+      anneesPourCapital: renteAnnuelle > 0 ? Math.ceil(capital / renteAnnuelle - 1e-9) : null
+    };
+  }
+
+  return { renteEstimee: renteEstimee, capitalDeces: capitalDeces, comparerSortie: comparerSortie };
 });

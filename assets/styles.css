@@ -610,6 +610,39 @@ table.comparaison { min-width: 560px; }
 .install-aide p { flex: 1 1 260px; }
 .install-aide .lien-btn { background: #fff; color: var(--indigo); }
 
+/* Les décors ronds des encadrés colorés ne doivent jamais capter les clics */
+.suggest::after, .kpi::after { pointer-events: none; }
+.suggest .s-head, .suggest .s-val, .suggest p { position: relative; z-index: 1; }
+
+/* Deux produits : assurance vie et CEA */
+.produit { display: grid; gap: 14px; padding: 14px; border-radius: var(--radius); background: var(--surface-2); border-inline-start: 3px solid var(--indigo); }
+.produit-cea { border-inline-start-color: var(--orange); }
+.produit > *, .sous-bloc > *, .libre-ligne > * { min-width: 0; }
+@media (max-width: 380px) { .produit { padding: 12px 10px; } }
+.produit .input-wrap { background: var(--surface); }
+.produit-titre { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 14.5px; font-weight: 700; }
+.produit-titre .hint { flex-basis: 100%; font-family: var(--font); font-weight: 500; letter-spacing: 0; }
+.card > .produit-titre { margin: 16px 0 10px; }
+.pastille-produit { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.pastille-produit.av { background: var(--indigo); }
+.pastille-produit.cea { background: var(--orange); }
+.kpi-repartition { margin-top: 2px; font-size: 12px; opacity: 0.9; }
+.s-cea { font-size: 12.5px !important; opacity: 0.9; }
+.pb { padding: 8px 0 0; }
+.sous-bloc { padding: 12px 14px 0; border-top: 1px solid var(--border); margin-top: 12px; }
+.sous-bloc .sous-titre { font-size: 13.5px; margin-bottom: 4px; }
+.sous-bloc .hint-bloc { padding: 0 0 10px; }
+.sous-bloc > .proj-champs { padding: 0 0 12px; }
+.libres-liste { display: grid; gap: 8px; margin-bottom: 10px; }
+.libre-ligne { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr) auto; gap: 8px; align-items: center; }
+.libre-ligne .input-wrap { height: 44px; background: var(--surface); }
+.libre-ligne input { padding-inline: 12px; }
+#libre-ajouter { margin-bottom: 12px; }
+#bloc-avance { margin-top: 14px; }
+#bloc-avance .agence-champs { padding-bottom: 12px; }
+#avance-err { padding: 0 14px; }
+.sortie-titre { margin: 18px 0 4px; }
+
 /* Infobulles d'explication */
 .aide {
   appearance: none; display: inline-grid; place-items: center; width: 26px; height: 26px; margin-inline-start: auto; flex: none;

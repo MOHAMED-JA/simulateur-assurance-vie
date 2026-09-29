@@ -75,7 +75,7 @@ test('scénario : cohérence avec le moteur et la projection', () => {
   assert.equal(c.investissement, 6000);
   assert.equal(c.actif, true);
   proche(c.sim.economie, M.simuler({ revenu: 45000, investissement: 6000 }).economie);
-  assert.equal(c.p.economies, null);
+  assert.ok(c.p.economies.every((x) => Math.abs(x - c.sim.economie) < 1e-9));
   assert.ok(c.valeurTotale > c.med.capitalFinal);
 });
 
@@ -163,12 +163,15 @@ test('capital décès : plus élevé entre capital acquis, versements et capital
 /* ---------- Partage ---------- */
 test('lien de partage : aller-retour sans perte', () => {
   const e = Object.assign(base(), { chef: true, enfants: 2, parents: 1, frequence: 'Trimestriel', croissancePct: 3.5, reinvestir: true, annee: '2025' });
-  assert.deepEqual(Pa.decoder(Pa.encoder(e)), e);
+  assert.deepEqual(Object.assign(S.defauts(), Pa.decoder(Pa.encoder(e))), e);
+  const e2 = Object.assign(base(), { versementCea: 300, initialAv: 5000, initialCea: 2000, tauxGarantiPct: 3.5, fraisEntreePct: 2,
+    rendementCeaPct: 9, fraisCeaPct: 0.4, ecartCeaPct: 5, libres: [{ annee: 3, montant: 4000 }, { annee: 7, montant: 1500.5 }], retraitDebut: 9, retraitMontant: 1200 });
+  assert.deepEqual(Object.assign(S.defauts(), Pa.decoder(Pa.encoder(e2))), e2);
   assert.ok(Pa.lien('https://exemple.tn/app/?x=1#ancien', e).startsWith('https://exemple.tn/app/?x=1#r=45000'));
 });
 
 test('lien de partage : valeurs invalides ignorées', () => {
-  const d = Pa.decoder('#r=abc&v=-5&d=99&f=Hebdo&a=1999&e=2.5&p=3&c=2&z=1&y=6&x=1e3');
+  const d = Pa.decoder('#r=abc&v=-5&d=99&f=Hebdo&a=1999&e=2.5&p=3&c=2&z=99&y=6&x=1e3&L=0:5,3:abc');
   assert.deepEqual(d, { rendementPct: 6 });
   assert.deepEqual(Pa.decoder(''), {});
   assert.deepEqual(Pa.decoder('r=%E0%A4%A'), {});

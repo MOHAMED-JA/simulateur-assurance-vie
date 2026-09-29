@@ -267,7 +267,7 @@
       <section class="card" aria-labelledby="t-inv">
         <div class="card-head">
           <span class="card-ico green"><svg class="ico"><use href="#i-chart"/></svg></span>
-          <div><h2 class="card-title" id="t-inv">Investissement</h2><p class="card-sub">Assurance vie ou CEA</p></div>
+          <div><h2 class="card-title" id="t-inv">Investissement</h2><p class="card-sub">Assurance vie et CEA, chacun avec ses règles</p></div>
         </div>
         <div class="fields">
           <div class="field">
@@ -279,8 +279,10 @@
               <button type="button" role="radio" aria-checked="false" data-val="Annuel">Annuel</button>
             </div>
           </div>
+          <div class="produit produit-av">
+          <h3 class="produit-titre"><span class="pastille-produit av"></span>Assurance vie<span class="hint">100 000 TND déductibles par an · contrat d'au moins 8 ans</span></h3>
           <div class="field" id="f-period">
-            <div class="field-top"><label for="investment-amount-period" id="lbl-period">Montant à investir par mois</label></div>
+            <div class="field-top"><label for="investment-amount-period" id="lbl-period">Versement assurance vie par mois</label></div>
             <div class="input-wrap">
               <svg class="ico"><use href="#i-coins"/></svg>
               <input id="investment-amount-period" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 500" aria-describedby="period-err">
@@ -289,21 +291,44 @@
             <p class="field-err" id="period-err"></p>
             <p class="field-warn" id="period-amb" hidden></p>
           </div>
+          <div class="field" id="f-av-initial">
+            <div class="field-top"><label for="av-initial">Versement initial en assurance vie</label><span class="hint">Facultatif</span></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-piggy"/></svg><input id="av-initial" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0"><span class="suffix">TND</span></div>
+          </div>
+          </div>
+          <div class="produit produit-cea">
+          <h3 class="produit-titre"><span class="pastille-produit cea"></span>Compte Épargne en Actions (CEA)<span class="hint">100 000 TND déductibles par an · bloqué 5 ans · impôt minimum 60 %</span></h3>
+          <div class="field" id="f-cea">
+            <div class="field-top"><label for="cea-period" id="lbl-cea">Versement CEA par mois</label></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-chart"/></svg><input id="cea-period" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0"><span class="suffix">TND</span></div>
+            <p class="field-warn" id="cea-amb" hidden></p>
+          </div>
+          <div class="field" id="f-cea-initial">
+            <div class="field-top"><label for="cea-initial">Versement initial sur le CEA</label><span class="hint">Facultatif</span></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-piggy"/></svg><input id="cea-initial" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0"><span class="suffix">TND</span></div>
+          </div>
+          </div>
+          <p class="field-err" id="montants-err"></p>
           <div class="total-box" aria-live="polite">
-            <span class="t-lbl">Montant total à investir<small id="total-formule">0 × 12 versements par an</small></span>
+            <span class="t-lbl">Montant total investi la 1re année<small id="total-formule">0 × 12 versements par an</small></span>
             <span class="t-val" id="investment-amount-total">0,000<span class="unit">TND</span></span>
           </div>
         </div>
 
         <div class="suggest" id="suggest">
-          <div class="s-head"><svg class="ico ico-sm"><use href="#i-bulb"/></svg>Suggestion optimale <button type="button" class="aide" aria-expanded="false" aria-controls="aide-plancher" aria-label="Explication" title="Explication"><svg class="ico ico-sm"><use href="#i-info"/></svg></button></div>
-          <p class="aide-texte" id="aide-plancher" hidden>L'impôt après investissement ne peut pas descendre sous 45 % de l'impôt initial : la réduction est donc de 55 % au plus. Le montant optimal est le plus petit investissement qui atteint ce plancher ; au-delà, l'économie n'augmente plus.</p>
+          <div class="s-head"><svg class="ico ico-sm"><use href="#i-bulb"/></svg>Montant optimal en assurance vie <button type="button" class="aide" aria-expanded="false" aria-controls="aide-plancher" aria-label="Explication" title="Explication"><svg class="ico ico-sm"><use href="#i-info"/></svg></button></div>
+          <p class="aide-texte" id="aide-plancher" hidden>Avec l'assurance vie, l'impôt ne peut pas descendre sous 45 % de l'impôt initial (réduction de 55 % au plus). Avec le CEA, la déduction ne peut pas ramener l'impôt sous 60 % (réduction de 40 % au plus). Le montant optimal est l'assurance vie qui, avec votre CEA, atteint le plancher de 45 % ; au-delà, l'économie n'augmente plus.</p>
           <div class="s-val" id="optimal-recommendation">—</div>
-          <p>Investissez ce montant pour réduire votre impôt au plancher légal (45 %).</p>
+          <p id="suggest-texte">Investissez ce montant par an en assurance vie pour réduire votre impôt au plancher légal (45 %).</p>
+          <p class="s-cea" id="suggest-cea"></p>
           <div class="s-foot">
             <button type="button" class="btn btn-white btn-sm" id="appliquer"><svg class="ico ico-sm"><use href="#i-check"/></svg>Appliquer ce montant</button>
             <span class="s-state" id="suggest-state" hidden></span>
           </div>
+        </div>
+        <div class="alerte" id="alerte-plafond" hidden>
+          <svg class="ico ico-sm"><use href="#i-alert"/></svg>
+          <span id="alerte-plafond-texte"></span>
         </div>
         <div class="alerte" id="alerte-plancher" hidden>
           <svg class="ico ico-sm"><use href="#i-alert"/></svg>
@@ -346,6 +371,7 @@
           <button type="button" class="btn btn-primaire js-pdf"><svg class="ico"><use href="#i-download"/></svg>Télécharger le rapport PDF</button>
           <button type="button" class="btn btn-ghost" id="partager"><svg class="ico"><use href="#i-share"/></svg>Partager la simulation</button>
           <button type="button" class="btn btn-ghost" id="enregistrer"><svg class="ico"><use href="#i-save"/></svg>Enregistrer</button>
+          <button type="button" class="btn btn-ghost" id="rappel" hidden><svg class="ico"><use href="#i-chat"/></svg>Être rappelé par un conseiller</button>
           <div class="partage" id="panneau-partage" hidden>
             <label for="lien-partage">Lien de la simulation (les noms du client et du conseiller n'y figurent pas)</label>
             <div class="partage-ligne">
@@ -365,6 +391,7 @@
             <div class="kpi-label"><span class="pastille"><svg class="ico ico-sm"><use href="#i-piggy"/></svg></span>Économie d'impôt</div>
             <div class="kpi-value" id="tax-saved"></div>
             <div class="kpi-sub">soit <b class="num" id="tax-saved-monthly"></b> par mois</div>
+            <div class="kpi-sub kpi-repartition" id="repartition-economie" hidden></div>
           </div>
           <div class="kpi k-violet">
             <div class="kpi-row">
@@ -394,7 +421,9 @@
             <div class="tax-row"><span class="l"><i style="background:linear-gradient(90deg,#f43f5e,#f97316)"></i>Impôt total avant investissement</span><span class="v" id="tax-before"></span></div>
             <div class="tax-row"><span class="l"><i style="background:linear-gradient(90deg,#4f46e5,#c026d3)"></i>Impôt total après investissement</span><span class="v" id="tax-after"></span></div>
             <div class="tax-row"><span class="l"><i style="background:var(--text)"></i>Minimum d'impôt (45 %)</span><span class="v" id="min-tax"></span></div>
-            <div class="tax-row fort"><span class="l"><i style="background:linear-gradient(90deg,#059669,#14b8a6)"></i>Montant optimal à investir</span><span class="v" id="optimal-investment"></span></div>
+            <div class="tax-row"><span class="l"><i style="background:#4f46e5"></i>Économie due à l'assurance vie</span><span class="v" id="eco-av"></span></div>
+            <div class="tax-row"><span class="l"><i style="background:#f97316"></i>Économie due au CEA (40 % de l'impôt au plus)</span><span class="v" id="eco-cea"></span></div>
+            <div class="tax-row fort"><span class="l"><i style="background:linear-gradient(90deg,#059669,#14b8a6)"></i>Montant optimal en assurance vie</span><span class="v" id="optimal-investment"></span></div>
           </div>
         </section>
 
@@ -443,16 +472,43 @@
               <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="p-duree" type="text" inputmode="numeric" autocomplete="off" value="10"><span class="suffix">ans</span></div>
             </div>
             <div class="field">
-              <div class="field-top"><label for="p-rendement">Rendement annuel</label></div>
+              <div class="field-top"><label for="p-compar">Placement classique</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-compar" type="text" inputmode="decimal" autocomplete="off" value="4"><span class="suffix">%</span></div>
+            </div>
+          </div>
+          <h3 class="produit-titre"><span class="pastille-produit av"></span>Assurance vie</h3>
+          <div class="proj-champs">
+            <div class="field">
+              <div class="field-top"><label for="p-rendement">Taux servi estimé</label><span class="hint">Garanti + participation</span></div>
               <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-rendement" type="text" inputmode="decimal" autocomplete="off" value="6"><span class="suffix">%</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="p-garanti">Taux minimum garanti</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-garanti" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-frais">Frais de gestion</label></div>
               <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais" type="text" inputmode="decimal" autocomplete="off" value="1"><span class="suffix">%</span></div>
             </div>
             <div class="field">
-              <div class="field-top"><label for="p-compar">Placement classique</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-compar" type="text" inputmode="decimal" autocomplete="off" value="4"><span class="suffix">%</span></div>
+              <div class="field-top"><label for="p-frais-entree">Frais sur versement</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais-entree" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+            </div>
+          </div>
+          <p class="hint-bloc pb" id="p-participation"></p>
+          <h3 class="produit-titre"><span class="pastille-produit cea"></span>CEA</h3>
+          <div class="proj-champs">
+            <div class="field">
+              <div class="field-top"><label for="p-rend-cea">Rendement annuel du CEA</label><span class="hint">Actions cotées</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-rend-cea" type="text" inputmode="decimal" autocomplete="off" value="8"><span class="suffix">%</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="p-frais-cea">Frais du CEA (droits de garde)</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais-cea" type="text" inputmode="decimal" autocomplete="off" value="0,5"><span class="suffix">%</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="p-ecart-cea">Écart entre scénarios du CEA</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-ecart-cea" type="text" inputmode="decimal" autocomplete="off" value="4"><span class="suffix">pts</span></div>
             </div>
           </div>
           <label class="case"><input type="checkbox" id="p-retraite"><span>Calculer la durée jusqu'à la retraite</span></label>
@@ -494,6 +550,26 @@
               <div class="field">
                 <div class="field-top"><label for="p-impot-interets">Impôt sur les intérêts du placement classique</label></div>
                 <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-impot-interets" type="text" inputmode="decimal" autocomplete="off" value="20"><span class="suffix">%</span></div>
+              </div>
+            </div>
+            <div class="sous-bloc">
+              <h4 class="sous-titre">Versements libres en assurance vie</h4>
+              <p class="hint-bloc">Versements ponctuels (prime, 13e mois…) en fin d'année ; ils sont déduits l'année du versement.</p>
+              <div id="libres-liste" class="libres-liste"></div>
+              <button type="button" class="btn btn-ghost btn-sm" id="libre-ajouter"><svg class="ico ico-sm"><use href="#i-plus"/></svg>Ajouter un versement libre</button>
+            </div>
+            <div class="sous-bloc">
+              <h4 class="sous-titre">Retraits programmés en assurance vie</h4>
+              <p class="hint-bloc" id="retrait-hint">Un revenu régulier tiré du contrat, chaque année, à partir d'une année donnée (après la durée minimale de 8 ans pour éviter la réintégration fiscale).</p>
+              <div class="proj-champs">
+            <div class="field">
+              <div class="field-top"><label for="p-retrait-debut">À partir de l'année</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="p-retrait-debut" type="text" inputmode="numeric" autocomplete="off" placeholder="Ex. 9"><span class="suffix">an</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="p-retrait-montant">Montant retiré par an</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="p-retrait-montant" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span class="suffix">TND</span></div>
+            </div>
               </div>
             </div>
             <p class="hint-bloc">Le barème et les déductions restent ceux de l'année choisie pendant toute la projection. Avec une inflation, le capital est aussi présenté en dinars constants (pouvoir d'achat d'aujourd'hui).</p>
@@ -538,7 +614,14 @@
             <div><h2 class="card-title" id="t-rachat">Simulation de rachat anticipé</h2><p class="card-sub">Coût d'une sortie avant le terme</p></div>
             <button type="button" class="aide" aria-expanded="false" aria-controls="aide-rachat" aria-label="Explication" title="Explication"><svg class="ico ico-sm"><use href="#i-info"/></svg></button>
           </div>
-          <p class="aide-texte" id="aide-rachat" hidden>Racheter, c'est récupérer tout ou partie de son épargne avant le terme. Le contrat peut prévoir une pénalité, et si le rachat intervient trop tôt, les montants déduits de l'impôt sont réintégrés au revenu de l'année du rachat : l'avantage fiscal obtenu est alors en partie repris.</p>
+          <p class="aide-texte" id="aide-rachat" hidden>Racheter, c'est récupérer tout ou partie de son épargne avant le terme. Le contrat peut prévoir une pénalité. En assurance vie, un rachat avant 8 ans fait réintégrer les primes déduites au revenu de l'année du rachat. Sur le CEA, chaque dépôt est bloqué 5 ans à compter du 1er janvier suivant : un retrait anticipé fait réintégrer les dépôts encore bloqués.</p>
+          <div class="field" id="bloc-r-produit">
+            <div class="field-top"><span class="lbl" id="lbl-r-produit">Produit</span></div>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-r-produit" id="r-produit">
+              <button type="button" role="radio" aria-checked="true" data-val="av">Assurance vie</button>
+              <button type="button" role="radio" aria-checked="false" data-val="cea">CEA</button>
+            </div>
+          </div>
           <div class="proj-champs">
             <div class="field">
               <div class="field-top"><label for="r-annee">Année du rachat</label></div>
@@ -556,6 +639,26 @@
           <p class="field-err" id="rachat-err"></p>
           <div id="rachat-res"></div>
           <div class="remark"><svg class="ico ico-sm"><use href="#i-info"/></svg><span id="rachat-note"></span></div>
+          <details class="avance" id="bloc-avance">
+            <summary>Avance sur contrat plutôt qu'un rachat</summary>
+            <p class="hint-bloc">L'assureur prête une partie de l'épargne sans racheter le contrat : pas de réintégration fiscale, le capital continue de travailler, mais l'avance est remboursée avec intérêts. Taux et conditions : selon le contrat.</p>
+            <div class="proj-champs agence-champs">
+            <div class="field">
+              <div class="field-top"><label for="a-montant">Montant de l'avance</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="a-montant" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex. 5 000"><span class="suffix">TND</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="a-taux">Taux de l'avance</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="a-taux" type="text" inputmode="decimal" autocomplete="off" value="7"><span class="suffix">%</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="a-duree">Durée de remboursement</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="a-duree" type="text" inputmode="numeric" autocomplete="off" value="24"><span class="suffix">mois</span></div>
+            </div>
+            </div>
+            <p class="field-err" id="avance-err"></p>
+            <div class="tax-rows agence-champs" id="avance-res"></div>
+          </details>
         </section>
 
         <section class="card" id="carte-prevoyance" aria-labelledby="t-prev" hidden>
@@ -589,7 +692,10 @@
           </div>
           <p class="field-err" id="prev-err"></p>
           <div class="tax-rows" id="prev-lignes"></div>
+          <h3 class="sous-titre sortie-titre">Au terme : capital ou rente ?</h3>
+          <div class="tax-rows" id="sortie-lignes"></div>
           <div class="remark"><svg class="ico ico-sm"><use href="#i-info"/></svg><span>Estimation indicative : la rente viagère réelle dépend des tables de mortalité et des conditions du contrat.</span></div>
+          <div class="remark"><svg class="ico ico-sm"><use href="#i-check"/></svg><span>Avantages à la sortie d'un contrat d'assurance vie respectant la durée minimale : capitaux et rentes servis exonérés d'impôt ; capital versé en cas de décès exonéré des droits de succession. À vérifier dans les conditions du contrat et le texte en vigueur.</span></div>
         </section>
 
       </div>
@@ -625,9 +731,9 @@
       <span class="card-ico"><svg class="ico"><use href="#i-help"/></svg></span>
       <div><h2 class="card-title" id="t-faq">Questions fréquentes</h2><p class="card-sub">L'essentiel pour comprendre la simulation</p></div>
     </div>
-    <details class="avance"><summary>Qu'est-ce que le plancher de 45 % ?</summary><p class="hint-bloc">Après déduction de l'investissement, l'impôt ne peut pas être inférieur à 45 % de l'impôt dû sans investissement. L'économie maximale est donc de 55 % de l'impôt initial. Investir davantage reste possible, mais ne réduit plus l'impôt.</p></details>
-    <details class="avance"><summary>Quelle différence entre assurance vie et CEA ?</summary><p class="hint-bloc">L'assurance vie est un contrat d'épargne souscrit auprès d'un assureur : elle permet de désigner des bénéficiaires et peut comporter des garanties de prévoyance. Le Compte Épargne en Actions (CEA) est un compte investi en actions cotées en bourse, avec des titres bloqués pendant une durée minimale. Les deux ouvrent droit à une déduction du revenu imposable, sous conditions propres à chacun : vérifiez-les auprès de votre conseiller.</p></details>
-    <details class="avance"><summary>Pourquoi un rachat anticipé coûte-t-il cher ?</summary><p class="hint-bloc">En cas de sortie avant la durée minimale, les montants déduits sont réintégrés au revenu imposable de l'année du rachat, souvent dans une tranche élevée ; le contrat peut aussi prévoir une pénalité. La carte « Simulation de rachat anticipé » chiffre ce coût.</p></details>
+    <details class="avance"><summary>Qu'est-ce que le plancher de 45 % ?</summary><p class="hint-bloc">Avec l'assurance vie, l'impôt ne peut pas être inférieur à 45 % de l'impôt dû sans investissement : l'économie maximale est de 55 %. Avec le CEA, la déduction ne peut pas ramener l'impôt sous 60 % : le CEA seul réduit l'impôt de 40 % au plus. En combinant les deux, le plancher reste de 45 %. Investir davantage reste possible, mais ne réduit plus l'impôt.</p></details>
+    <details class="avance"><summary>Quelle différence entre assurance vie et CEA ?</summary><p class="hint-bloc">L'assurance vie est un contrat d'épargne souscrit auprès d'un assureur, d'au moins 8 ans pour l'avantage fiscal : elle permet de désigner des bénéficiaires, offre souvent un taux minimum garanti et peut comporter des garanties de prévoyance. Le Compte Épargne en Actions (CEA) est investi en actions cotées en bourse ; chaque dépôt est bloqué 5 ans à compter du 1er janvier suivant. Chacun permet de déduire jusqu'à 100 000 TND par an du revenu imposable, avec un impôt minimum de 45 % pour l'assurance vie et de 60 % pour le CEA. Règles à confirmer avec le texte en vigueur (article 39 du Code de l'IRPP et de l'IS).</p></details>
+    <details class="avance"><summary>Pourquoi un rachat anticipé coûte-t-il cher ?</summary><p class="hint-bloc">En cas de rachat d'assurance vie avant 8 ans, ou de retrait du CEA pendant la période de blocage de 5 ans, les montants déduits sont réintégrés au revenu imposable de l'année de sortie, souvent dans une tranche élevée ; le contrat peut aussi prévoir une pénalité. La carte « Simulation de rachat anticipé » chiffre ce coût et le compare à une avance sur contrat.</p></details>
     <details class="avance"><summary>Que signifie « en dinars constants » ?</summary><p class="hint-bloc">C'est la valeur du capital futur exprimée en pouvoir d'achat d'aujourd'hui, une fois l'inflation retirée. Renseignez l'inflation dans les hypothèses avancées pour l'afficher.</p></details>
     <details class="avance"><summary>Comment atteindre un capital précis ?</summary><p class="hint-bloc">Indiquez l'objectif de capital dans la carte « Projection du capital » : le simulateur calcule le versement nécessaire avec les hypothèses choisies, puis l'applique en un clic. Cochez « Calculer la durée jusqu'à la retraite » pour caler la durée sur votre âge.</p></details>
     <details class="avance"><summary>Mes données sont-elles envoyées quelque part ?</summary><p class="hint-bloc">Non. Tous les calculs se font dans votre navigateur. Le portefeuille et les coordonnées de l'agence restent sur cet appareil ; le lien de partage ne contient que les paramètres de calcul, jamais les noms.</p></details>
@@ -646,6 +752,7 @@
 
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
+<script src="js/config.js"></script>
 <script src="js/baremes.js"></script>
 <script src="js/moteur-fiscal.js"></script>
 <script src="js/saisie.js"></script>

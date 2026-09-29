@@ -129,6 +129,22 @@ test('langues : anglais puis arabe (droite à gauche)', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
 });
 
+test.describe('petit téléphone (320 px)', () => {
+  test.use({ viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  test('aucun défilement horizontal, dans les trois langues', async ({ page }) => {
+    await page.fill('#revenue', '60000');
+    await page.fill('#investment-amount-period', '400');
+    await page.fill('#cea-period', '300');
+    await page.click('#p-avance summary');
+    await page.click('#libre-ajouter');
+    for (const l of ['fr', 'en', 'ar']) {
+      await page.selectOption('#langue', l);
+      const [large, visible] = await page.evaluate(() => [window.innerWidth, document.documentElement.clientWidth]);
+      expect(large, l).toBe(visible);
+    }
+  });
+});
+
 test('aucun défilement horizontal, dans les trois langues', async ({ page }) => {
   await page.fill('#revenue', '45000');
   await page.fill('#investment-amount-period', '500');
@@ -225,4 +241,76 @@ test('installer l\'application : invitation du navigateur ou explications', asyn
   await expect(page.locator('#install-aide')).toBeHidden();
   await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
   await expect(page.locator('#installer')).toBeHidden();
+});
+
+test('assurance vie et CEA : règles distinctes et répartition', async ({ page }) => {
+  await page.fill('#revenue', '60000');
+  await page.fill('#cea-period', '4000');
+  /* CEA seul : réduction plafonnée à 40 % de l'impôt */
+  await expect(page.locator('#tax-reduction-rate')).toHaveText(/^40,0/);
+  await expect(page.locator('#suggest-cea')).toContainText('40 %');
+  /* Complément d'assurance vie jusqu'au plancher de 45 % */
+  await page.click('#appliquer');
+  await expect(page.locator('#tax-reduction-rate')).toHaveText(/^55,0/);
+  await expect(page.locator('#repartition-economie')).toBeVisible();
+  await expect(page.locator('#deductions')).toContainText('CEA');
+  /* Plafond de 100 000 TND */
+  await page.fill('#cea-initial', '120000');
+  await expect(page.locator('#alerte-plafond')).toBeVisible();
+});
+
+test('rachat CEA (blocage 5 ans) et avance sur contrat', async ({ page }) => {
+  await page.fill('#revenue', '60000');
+  await page.fill('#investment-amount-period', '500');
+  await page.fill('#cea-period', '300');
+  await expect(page.locator('#bloc-r-produit')).toBeVisible();
+  await page.locator('#r-produit [data-val="cea"]').click();
+  await page.fill('#r-annee', '3');
+  await expect(page.locator('#rachat-res .statut.ko')).toContainText(/bloqués/);
+  await page.locator('#r-produit [data-val="av"]').click();
+  await page.fill('#r-annee', '5');
+  await page.click('#bloc-avance summary');
+  await page.fill('#a-montant', '5000');
+  await expect(page.locator('#avance-res')).toContainText('Mensualité');
+  await page.fill('#a-montant', '9999999');
+  await expect(page.locator('#avance-err')).not.toBeEmpty();
+});
+
+test('versement initial, versements libres, retraits programmés et taux garanti', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.fill('#av-initial', '10000');
+  await expect(page.locator('#proj-resultat')).toBeVisible();
+  await page.fill('#p-garanti', '3');
+  await expect(page.locator('#p-participation')).toContainText('3,0');
+  await expect(page.locator('#scen-l-prudent')).toContainText('4,0');
+  await page.fill('#p-garanti', '5');
+  await expect(page.locator('#scen-l-prudent')).toContainText('5,0');
+  await page.click('#p-avance summary');
+  await page.click('#libre-ajouter');
+  await page.locator('.libre-annee').first().fill('3');
+  await page.locator('.libre-montant').first().fill('2000');
+  await page.fill('#p-duree', '12');
+  await page.fill('#p-retrait-debut', '5');
+  await page.fill('#p-retrait-montant', '1000');
+  await expect(page.locator('#proj-err')).toContainText('8');
+  await page.fill('#p-retrait-debut', '9');
+  await expect(page.locator('#proj-err')).toBeEmpty();
+  await expect(page.locator('#proj-lignes')).toContainText('Retraits programmés perçus');
+  /* Le lien de partage transporte ces hypothèses */
+  await page.click('#partager');
+  const lien = await page.inputValue('#lien-partage');
+  expect(lien).toContain('L=3%3A2000');
+  expect(lien).toContain('b=10000');
+});
+
+test('être rappelé : visible seulement si l\'agence a un téléphone ou un e-mail', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await expect(page.locator('#rappel')).toBeHidden();
+  await page.click('#mode-conseiller');
+  await page.click('#agence summary');
+  await page.fill('#ag-tel', '+216 71 000 000');
+  await expect(page.locator('#rappel')).toBeVisible();
+  await page.context().route('https://wa.me/**', (r) => r.fulfill({ status: 200, body: 'ok' }));
+  const [requete] = await Promise.all([page.context().waitForEvent('request', (r) => r.url().startsWith('https://wa.me/')), page.click('#rappel')]);
+  expect(requete.url()).toContain('wa.me/21671000000?text=');
 });

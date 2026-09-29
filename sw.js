@@ -2,7 +2,7 @@
    Stratégie « réseau d'abord » : en ligne, l'utilisateur reçoit toujours la dernière version publiée ;
    hors ligne (en agence sans réseau), la dernière version consultée est servie depuis le cache.
    Changer VERSION à chaque publication qui modifie la liste des fichiers. */
-var VERSION = 'simulateur-av-v5';
+var VERSION = 'simulateur-av-v6';
 var FICHIERS = [
   './', 'index.html', 'manifest.webmanifest',
   'assets/styles.css', 'assets/fonts.css', 'assets/fonts/Inter-1.woff2', 'assets/fonts/PlusJakartaSans-2.woff2',
@@ -10,7 +10,7 @@ var FICHIERS = [
   'assets/vendor/jspdf.umd.min.js', 'assets/vendor/qrcode.js',
   'js/baremes.js', 'js/moteur-fiscal.js', 'js/saisie.js', 'js/projection.js', 'js/scenario.js', 'js/rachat.js',
   'js/prevoyance.js', 'js/partage.js', 'js/export-tableur.js', 'js/portefeuille.js', 'js/conseil.js', 'js/graphiques.js',
-  'js/i18n.js', 'js/pdf.js', 'js/interface.js'
+  'js/config.js', 'js/i18n.js', 'js/pdf.js', 'js/interface.js'
 ];
 
 self.addEventListener('install', function (e) {

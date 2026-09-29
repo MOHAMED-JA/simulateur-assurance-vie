@@ -87,59 +87,138 @@
     return { investissementOptimal: Math.min(revenuNet - netApres, revenuNet), revenuNetApres: netApres, impotApres: impotMin };
   }
 
-  /* Impôt après un investissement donné (plancher appliqué) */
-  function impotApresInvestissement(revenuNet, impotInitial, investissement, r) {
-    var rg = r || regles();
-    var netApres = Math.max(revenuNet - investissement, 0);
-    var details = impotDetaille(netApres, rg);
-    var impotMin = impotInitial * rg.impotMinimumTaux;
-    var ajuste = details.total < impotMin ? appliquerImpotMinimum(details, impotMin, rg) : details;
-    return { revenuNetApres: netApres, details: ajuste };
+  function produits(r) {
+    var p = (r || regles()).produits || {};
+    return {
+      av: p.av || { plafond: Infinity, impotMinimumTaux: (r || regles()).impotMinimumTaux, dureeMinimaleAns: 0 },
+      cea: p.cea || { plafond: Infinity, impotMinimumTaux: (r || regles()).impotMinimumTaux, dureeBlocageAns: 0 }
+    };
   }
 
-  /* Simulation complète : entrée = saisies de l'utilisateur, sortie = tous les chiffres affichés */
+  /* Impôt après déduction de l'assurance vie (av) et du CEA (cea), montants annuels bruts.
+     Règles : chaque déduction est plafonnée ; l'impôt final ne descend jamais sous le minimum de l'assurance vie
+     (45 %) ; la part de réduction due au CEA ne dépasse jamais (1 − 60 %) de l'impôt initial, de sorte qu'un CEA
+     seul laisse au moins 60 % de l'impôt. Renvoie le détail par tranche ajusté et la part de chaque produit. */
+  function impotApresDeductions(revenuNet, impotInitial, av, cea, r) {
+    var rg = r || regles();
+    var P = produits(rg);
+    var dAv = Math.min(Math.max(av || 0, 0), P.av.plafond);
+    var dCea = Math.min(Math.max(cea || 0, 0), P.cea.plafond);
+    var minAv = impotInitial * P.av.impotMinimumTaux;
+    var reductionCeaMax = impotInitial * (1 - P.cea.impotMinimumTaux);
+    var apresAv = Math.max(impotDetaille(Math.max(revenuNet - dAv, 0), rg).total, dAv > 0 ? minAv : 0);
+    if (dAv === 0) apresAv = impotInitial;
+    var netApres = Math.max(revenuNet - dAv - dCea, 0);
+    var details = impotDetaille(netApres, rg);
+    var final = Math.max(details.total, dAv > 0 || dCea > 0 ? minAv : 0, dCea > 0 ? apresAv - reductionCeaMax : 0);
+    final = Math.min(final, impotInitial);
+    var ajuste = details.total < final - 1e-9 ? appliquerImpotMinimum(details, final, rg) : details;
+    return {
+      revenuNetApres: netApres, details: ajuste, total: ajuste.total,
+      deductionAv: dAv, deductionCea: dCea,
+      economieAv: Math.max(0, impotInitial - apresAv),
+      economieCea: Math.max(0, apresAv - ajuste.total)
+    };
+  }
+
+  /* Impôt après un investissement donné (plancher appliqué) */
+  function impotApresInvestissement(revenuNet, impotInitial, investissement, r) {
+    var a = impotApresDeductions(revenuNet, impotInitial, investissement, 0, r);
+    return { revenuNetApres: a.revenuNetApres, details: a.details };
+  }
+
+  /* Assurance vie qui, avec le CEA donné, ramène l'impôt au minimum légal (plafond compris) */
+  function complementAv(revenuNet, impotInitial, cea, rg) {
+    var P = produits(rg);
+    var cible = impotInitial * P.av.impotMinimumTaux;
+    if (!(impotInitial > 0)) return 0;
+    if (!(cea > 0)) {
+      var opt = investissementOptimal(revenuNet, impotInitial, rg).investissementOptimal;
+      return Math.min(opt, P.av.plafond);
+    }
+    var haut = Math.min(P.av.plafond, revenuNet);
+    if (impotApresDeductions(revenuNet, impotInitial, haut, cea, rg).total > cible + 1e-7) return haut;
+    var bas = 0;
+    for (var n = 0; n < 200 && haut - bas > 1e-9; n++) {
+      var m = (bas + haut) / 2;
+      if (impotApresDeductions(revenuNet, impotInitial, m, cea, rg).total <= cible + 1e-7) haut = m; else bas = m;
+    }
+    return haut;
+  }
+
+  /* CEA au-delà duquel un dépôt supplémentaire ne réduit plus l'impôt (assurance vie donnée) */
+  function ceaUtile(revenuNet, impotInitial, av, rg) {
+    var P = produits(rg);
+    if (!(impotInitial > 0)) return 0;
+    var haut = Math.min(P.cea.plafond, revenuNet);
+    var mini = impotApresDeductions(revenuNet, impotInitial, av, haut, rg).total;
+    var bas = 0;
+    for (var n = 0; n < 200 && haut - bas > 1e-9; n++) {
+      var m = (bas + haut) / 2;
+      if (impotApresDeductions(revenuNet, impotInitial, av, m, rg).total <= mini + 1e-7) haut = m; else bas = m;
+    }
+    return haut;
+  }
+
+  /* Simulation complète : entrée = saisies de l'utilisateur, sortie = tous les chiffres affichés.
+     entree.investissementAv (ou investissement) et entree.investissementCea : montants annuels. */
   function simuler(entree, cle) {
     var rg = regles(cle);
+    var P = produits(rg);
     var revenu = entree.revenu || 0;
     var det = detailDeductions(revenu, !!entree.chef, entree.enfants || 0, entree.infirmes || 0, entree.etudiants || 0, entree.parents || 0, rg);
     var deductions = totalDeductions(det);
     var revenuNet = Math.max(revenu - deductions, 0);
     var avant = impotDetaille(revenuNet, rg);
-    var investissement = entree.investissement || 0;
-    var apres = impotApresInvestissement(revenuNet, avant.total, investissement, rg);
-    var economie = Math.max(0, avant.total - apres.details.total);
+    var invAv = entree.investissementAv != null ? entree.investissementAv : (entree.investissement || 0);
+    var invCea = entree.investissementCea || 0;
+    var apres = impotApresDeductions(revenuNet, avant.total, invAv, invCea, rg);
+    var economie = Math.max(0, avant.total - apres.total);
     return {
       regles: rg,
+      produits: P,
       revenu: revenu,
       deductionsDetail: det,
       deductions: deductions,
       revenuNet: revenuNet,
       avant: avant,
       impotAvant: avant.total,
-      impotMinimum: avant.total * rg.impotMinimumTaux,
-      investissement: investissement,
+      impotMinimum: avant.total * P.av.impotMinimumTaux,
+      impotMinimumCea: avant.total * P.cea.impotMinimumTaux,
+      investissement: invAv + invCea,
+      investissementAv: invAv,
+      investissementCea: invCea,
+      deductionAv: apres.deductionAv,
+      deductionCea: apres.deductionCea,
+      horsPlafondAv: Math.max(0, invAv - P.av.plafond),
+      horsPlafondCea: Math.max(0, invCea - P.cea.plafond),
       revenuNetApres: apres.revenuNetApres,
       apres: apres.details,
-      impotApres: apres.details.total,
+      impotApres: apres.total,
       economie: economie,
+      economieAv: apres.economieAv,
+      economieCea: apres.economieCea,
       tauxReduction: avant.total > 0 ? economie / avant.total * 100 : 0,
-      optimal: investissementOptimal(revenuNet, avant.total, rg).investissementOptimal
+      /* Assurance vie qui complète le CEA saisi pour atteindre le plancher */
+      optimal: complementAv(revenuNet, avant.total, invCea, rg),
+      /* CEA au-delà duquel le dépôt ne réduit plus l'impôt, avec l'assurance vie saisie */
+      ceaUtile: ceaUtile(revenuNet, avant.total, invAv, rg)
     };
   }
 
-  /* Économie d'impôt pour un investissement annuel donné (courbe de sensibilité) */
+  /* Économie d'impôt pour un investissement annuel en assurance vie donné, CEA saisi inchangé (courbe) */
   function economiePourInvestissement(sim, investissement) {
-    var apres = impotApresInvestissement(sim.revenuNet, sim.impotAvant, investissement, sim.regles);
-    return Math.max(0, sim.impotAvant - apres.details.total);
+    var a = impotApresDeductions(sim.revenuNet, sim.impotAvant, investissement, sim.investissementCea || 0, sim.regles);
+    return Math.max(0, sim.impotAvant - a.total);
   }
 
-  /* Mode inverse : investissement annuel minimal qui procure l'économie d'impôt visée.
-     L'économie croît avec l'investissement jusqu'au plancher légal : recherche par dichotomie.
-     Renvoie { possible, investissementAnnuel, economieMax } (économieMax = économie au plancher). */
+  /* Mode inverse : assurance vie annuelle minimale (CEA saisi inchangé) qui procure l'économie visée.
+     Renvoie { possible, investissementAnnuel, economieMax }. */
   function investissementPourEconomie(sim, cible) {
-    var economieMax = sim.impotAvant - sim.impotMinimum;
+    var economieMax = economiePourInvestissement(sim, Math.min(sim.produits.av.plafond, Math.max(sim.revenuNet, 0)));
     if (!(cible > 0)) return { possible: true, investissementAnnuel: 0, economieMax: economieMax };
     if (cible > economieMax + 0.0005) return { possible: false, investissementAnnuel: null, economieMax: economieMax };
+    if (economiePourInvestissement(sim, 0) >= cible) return { possible: true, investissementAnnuel: 0, economieMax: economieMax };
     var bas = 0, haut = Math.max(sim.optimal, 1);
     for (var n = 0; n < 100; n++) {
       var milieu = (bas + haut) / 2;
@@ -157,6 +236,8 @@
     appliquerImpotMinimum: appliquerImpotMinimum,
     investissementOptimal: investissementOptimal,
     impotApresInvestissement: impotApresInvestissement,
+    impotApresDeductions: impotApresDeductions,
+    produits: produits,
     simuler: simuler,
     economiePourInvestissement: economiePourInvestissement,
     investissementPourEconomie: investissementPourEconomie

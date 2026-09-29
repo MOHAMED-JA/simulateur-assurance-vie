@@ -13,7 +13,7 @@
       '2025': {
         annee: 2025,
         libelle: 'Loi de finances 2025',
-        source: 'Paramètres repris de la version précédente du simulateur ; à confirmer avec le texte officiel (Code de l\'IRPP et de l\'IS).',
+        source: 'Paramètres à confirmer avec le texte officiel (Code de l\'IRPP et de l\'IS, article 39).',
         tranches: [
           { min: 0,     max: 5000,     taux: 0.00 },
           { min: 5000,  max: 10000,    taux: 0.15 },
@@ -34,9 +34,21 @@
         },
         /* Impôt après investissement jamais inférieur à 45 % de l'impôt initial (réduction de 55 % au plus) */
         impotMinimumTaux: 0.45,
-        /* Sortie anticipée de l'assurance vie : les montants déduits sont réintégrés au revenu imposable
-           de l'année du rachat si le contrat a duré moins de `dureeMinimaleAns`. Paramètre à confirmer. */
-        sortie: { dureeMinimaleAns: 10 }
+        /* Règles propres à chaque produit (article 39 du Code de l'IRPP et de l'IS ; valeurs à confirmer
+           avec le texte en vigueur) :
+           - assurance vie : primes déductibles dans la limite de `plafond` par an ; contrat d'au moins
+             `dureeMinimaleAns` ans (8 ans depuis la loi de finances 2018), sinon réintégration en cas de rachat ;
+             impôt minimum `impotMinimumTaux` de l'impôt initial ;
+           - CEA : dépôts déductibles dans la limite de `plafond` par an ; la déduction ne peut pas ramener
+             l'impôt sous `impotMinimumTaux` (60 %) de l'impôt dû avant déduction ; sommes bloquées
+             `dureeBlocageAns` ans à compter du 1er janvier de l'année suivant le dépôt. */
+        produits: {
+          av: { plafond: 100000, impotMinimumTaux: 0.45, dureeMinimaleAns: 8 },
+          cea: { plafond: 100000, impotMinimumTaux: 0.60, dureeBlocageAns: 5 }
+        },
+        /* Sortie anticipée de l'assurance vie : réintégration des montants déduits si le contrat a duré
+           moins de `dureeMinimaleAns` (même valeur que produits.av.dureeMinimaleAns). */
+        sortie: { dureeMinimaleAns: 8 }
       }
     }
   };

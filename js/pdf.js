@@ -316,7 +316,7 @@
     tuiles([
       { lib: t('Économie d\'impôt'), val: d.fmtTND(sim.economie), sous: t('par an'), c: C.vert },
       { lib: t('Taux de réduction d\'impôt'), val: d.fmtPct(sim.tauxReduction), sous: t('55 % au maximum'), c: C.violet },
-      { lib: t('Montant optimal à investir'), val: d.fmtTND(sim.optimal), sous: t('par an'), c: C.orange }
+      { lib: t('Montant optimal en assurance vie'), val: d.fmtTND(sim.optimal), sous: t('par an'), c: C.orange }
     ]);
 
     titre(t('Hypothèses'));
@@ -326,6 +326,7 @@
     rangee(t('Impôt total avant investissement'), d.fmtTND(sim.impotAvant));
     rangee(t('Impôt total après investissement'), d.fmtTND(sim.impotApres));
     rangee(t('Minimum d\'impôt (45 %)'), d.fmtTND(sim.impotMinimum));
+    if (sim.economieCea > 0) { rangee(t('Économie due à l\'assurance vie'), d.fmtTND(sim.economieAv)); rangee(t('Économie due au CEA (40 % de l\'impôt au plus)'), d.fmtTND(sim.economieCea)); }
     rangee(t('Économie d\'impôt'), d.fmtTND(sim.economie), 'fort');
 
     titre(t('Revenu net imposable'));
@@ -343,10 +344,10 @@
     graphe({
       xMax: pts[pts.length - 1][0] || 1,
       yMax: Math.max.apply(null, pts.map(function (p) { return p[1]; })) || 1,
-      xLib: t('Montant investi par an (TND)'),
+      xLib: t('Assurance vie investie par an (TND)'),
       series: [{ pts: pts, c: C.indigo, aire: [232, 234, 252], epaisseur: 0.8 }],
       repere: sim.optimal,
-      point: calc.investissement > 0 ? [calc.investissement, Math.min(sim.economie, Math.max.apply(null, pts.map(function (p) { return p[1]; })))] : null
+      point: sim.investissementAv > 0 ? [sim.investissementAv, Math.min(sim.economie, Math.max.apply(null, pts.map(function (p) { return p[1]; })))] : null
     });
 
     if (d.projection) {

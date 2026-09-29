@@ -2,18 +2,32 @@
 
 Simulateur d'économie d'impôt sur le revenu (Tunisie, montants en TND) grâce à l'assurance vie et au Compte Épargne en Actions (CEA). Application 100 % statique : aucun serveur, aucune donnée envoyée. Polices et bibliothèques sont hébergées dans le dépôt : aucune requête vers un service tiers.
 
+## Règles fiscales appliquées (article 39 du Code de l'IRPP et de l'IS, à confirmer)
+
+| | Assurance vie | CEA |
+|---|---|---|
+| Déduction maximale | 100 000 TND par an | 100 000 TND par an |
+| Impôt minimum après déduction | 45 % de l'impôt initial | 60 % de l'impôt initial |
+| Durée | contrat d'au moins 8 ans (loi de finances 2018) | chaque dépôt bloqué 5 ans à compter du 1er janvier suivant |
+| Sortie anticipée | primes déduites réintégrées au revenu de l'année du rachat | dépôts encore bloqués réintégrés au revenu de l'année du retrait |
+
+Avec les deux produits, l'impôt ne descend jamais sous 45 % et la part de réduction due au CEA ne dépasse jamais 40 % de l'impôt initial. Tous ces paramètres sont dans `js/baremes.js` (`produits`).
+
 ## Fonctions
 
-- Impôt avant et après investissement, économie annuelle et mensuelle, plancher légal de 45 %.
-- Montant optimal à investir, application en un clic, courbe « économie selon le montant investi ».
-- **Mode inverse** : « je veux économiser X TND par an » donne le montant à verser (par mois, trimestre, semestre ou an).
+- **Assurance vie et CEA distingués** : versements périodiques et versement initial pour chacun, plafonds, économie due à chaque produit, alerte au-delà des plafonds.
+- Impôt avant et après investissement, économie annuelle et mensuelle, plancher légal.
+- Montant optimal en assurance vie (compte tenu du CEA saisi), application en un clic ; CEA au-delà duquel un dépôt ne réduit plus l'impôt ; courbe « économie selon le montant investi ».
+- **Mode inverse** : « je veux économiser X TND par an » donne le montant à verser en assurance vie, en plus du CEA (par mois, trimestre, semestre ou an).
 - Détail des déductions et de l'impôt tranche par tranche.
 - **Saisie tolérante** : « 45 000 », « 45000,5 », « 45,000.5 » sont compris ; « 45,000 » (ambigu) déclenche un avertissement avec correction en un clic.
-- **Projection du capital** : durée, rendement, frais, trois scénarios dont l'écart dépend du support (fonds en euros ± 1 pt, équilibré ± 2 pts, unités de compte ± 4 pts, ou personnalisé), hausse annuelle du revenu et des versements, inflation et capital en dinars constants, rendement effectif (TRI), comparaison avec un placement classique, export annuel en Excel (CSV).
+- **Projection du capital par produit** : assurance vie (taux servi, **taux minimum garanti** sous lequel le scénario prudent ne descend pas, participation aux bénéfices, frais de gestion et **frais sur versement**) et CEA (rendement, frais, écart propres) ; **versements libres** ponctuels et **retraits programmés** (après 8 ans) en assurance vie ; durée, trois scénarios dont l'écart dépend du support (fonds en euros ± 1 pt, équilibré ± 2 pts, unités de compte ± 4 pts, ou personnalisé), hausse annuelle du revenu et des versements, inflation et capital en dinars constants, rendement effectif (TRI), comparaison avec un placement classique, export annuel en Excel (CSV).
 - **Objectif de capital** : « je veux 150 000 TND au terme » donne le versement nécessaire (scénario médian, avec frais, hausse des versements et réinvestissement), appliqué en un clic.
 - **Mode retraite** : l'âge actuel et l'âge de départ fixent la durée ; avec la pension estimée, la carte Prévoyance affiche le revenu mensuel à la retraite et la part apportée par la rente.
 - **Comparatif des placements** : contrat (capital + économie d'impôt), placement classique avant et après impôt sur les intérêts (taux modifiable, 20 % par défaut, à confirmer) et versements cumulés.
-- **Rachat anticipé** (partiel ou total, à l'année N) : pénalité du contrat, réintégration fiscale des montants déduits si le contrat a moins de 10 ans (paramètre `sortie.dureeMinimaleAns` du barème), montant net perçu et coût de la sortie.
+- **Rachat anticipé** (partiel ou total, à l'année N), en assurance vie ou sur le CEA : pénalité, réintégration fiscale selon les règles de chaque produit, montant net perçu et coût de la sortie ; **avance sur contrat** (montant, taux, durée) comparée au coût d'un rachat du même montant.
+- **Capital ou rente au terme** : total des rentes, supplément et nombre d'années pour égaler le capital ; rappel des avantages à la sortie.
+- **Être rappelé par un conseiller** : message WhatsApp (ou e-mail) vers l'agence, avec le lien de la simulation. Coordonnées par défaut dans `js/config.js`, ou saisies par le conseiller dans le mode conseiller.
 - **Prévoyance** : rente estimée au terme (durée et taux technique saisis) et capital versé aux bénéficiaires en cas de décès.
 - **Lien de partage** : les paramètres sont encodés dans l'adresse (partie `#`), avec un QR code et un envoi en un clic par WhatsApp ou e-mail (et partage direct du PDF sur les téléphones qui le permettent) ; les noms du client et du conseiller n'y figurent jamais.
 - **Rapport PDF** (jsPDF) : en-tête et logo, numéro de dossier, indicateurs, tableaux, graphiques, rachat, prévoyance, QR code, mentions légales, pages numérotées. En arabe, le rapport est rédigé en français (les polices standard du PDF n'ont pas de glyphes arabes). Si jsPDF ne se charge pas, la boîte d'impression du navigateur prend le relais.
@@ -34,7 +48,8 @@ sw.js                   mode hors ligne (réseau d'abord, cache en secours)
 assets/styles.css       styles (dont la mise en page d'impression)
 assets/fonts*           polices hébergées localement
 assets/vendor/          jsPDF et qrcode-generator (licences MIT, voir LICENCES.md)
-js/baremes.js           barème, déductions et règle de sortie par année  <- à modifier à chaque loi de finances
+js/config.js            coordonnées de l'agence proposées à tous (bouton « Être rappelé »)
+js/baremes.js           barème, déductions, règles assurance vie et CEA par année  <- à modifier à chaque loi de finances
 js/moteur-fiscal.js     calcul de l'impôt et mode inverse (fonctions pures)
 js/saisie.js            lecture des nombres saisis (fonctions pures)
 js/projection.js        projection du capital (fonctions pures)

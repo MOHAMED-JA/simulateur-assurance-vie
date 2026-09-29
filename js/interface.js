@@ -95,9 +95,10 @@
   /* ===================================================================
      État de l'interface
      =================================================================== */
-  var ui = { chef: false, frequence: 'Mensuel', annee: Baremes.parDefaut, calc: null, rachat: null, prevoyance: null, inverse: null, portefeuille: [], selection: [] };
+  var ui = { produitRachat: 'av', chef: false, frequence: 'Mensuel', annee: Baremes.parDefaut, calc: null, rachat: null, prevoyance: null, inverse: null, portefeuille: [], selection: [] };
   var champsEntiers = ['children', 'disabled-children', 'students', 'parents'];
-  var champsHypotheses = ['p-duree', 'p-rendement', 'p-frais', 'p-compar', 'p-ecart', 'p-croissance', 'p-inflation', 'p-impot-interets'];
+  var champsHypotheses = ['p-duree', 'p-rendement', 'p-garanti', 'p-frais', 'p-frais-entree', 'p-rend-cea', 'p-frais-cea', 'p-ecart-cea', 'p-compar', 'p-ecart', 'p-croissance', 'p-inflation', 'p-impot-interets', 'p-retrait-debut', 'p-retrait-montant'];
+  var champsMontants = ['av-initial', 'cea-period', 'cea-initial'];
   var depot = null;
 
   function lireEntier(id) {
@@ -109,8 +110,44 @@
   }
 
   /* État de saisie complet (format de Scenario.defauts) */
+  /* Montant facultatif : vide = 0 ; une saisie invalide compte pour 0 (le champ est signalé) */
+  function montant(id) { var r = lire(id); return isFinite(r.v) ? r.v : 0; }
+
+  /* Versements libres saisis (lignes complètes seulement) */
+  function lireLibres() {
+    return Array.prototype.map.call($('libres-liste').querySelectorAll('.libre-ligne'), function (l) {
+      var a = Saisie.lireNombre(l.querySelector('.libre-annee').value);
+      var m = Saisie.lireNombre(l.querySelector('.libre-montant').value);
+      if (a.vide && m.vide) return null;
+      return { annee: a.vide ? NaN : a.v, montant: m.vide ? NaN : m.v };
+    }).filter(Boolean);
+  }
+
+  function ajouterLibre(l) {
+    var liste = $('libres-liste');
+    if (liste.children.length >= 10) return;
+    var d = document.createElement('div');
+    d.className = 'libre-ligne';
+    d.innerHTML = '<div class="input-wrap"><input class="libre-annee" type="text" inputmode="numeric" autocomplete="off"><span class="suffix"></span></div>' +
+      '<div class="input-wrap"><input class="libre-montant" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">TND</span></div>' +
+      '<button type="button" class="btn btn-ghost btn-sm btn-icon libre-suppr"><svg class="ico ico-sm"><use href="#i-trash"/></svg></button>';
+    d.querySelector('.libre-annee').placeholder = t('Année');
+    d.querySelector('.libre-annee').setAttribute('aria-label', t('Année du versement libre'));
+    d.querySelector('.libre-annee').nextSibling.textContent = t('an');
+    d.querySelector('.libre-montant').placeholder = t('Montant');
+    d.querySelector('.libre-montant').setAttribute('aria-label', t('Montant du versement libre'));
+    d.querySelector('.libre-suppr').setAttribute('aria-label', t('Retirer ce versement libre'));
+    d.querySelector('.libre-suppr').title = t('Retirer ce versement libre');
+    if (l) { d.querySelector('.libre-annee').value = String(l.annee); d.querySelector('.libre-montant').value = fmtLibre(l.montant); }
+    liste.appendChild(d);
+    $('libre-ajouter').disabled = liste.children.length >= 10;
+    return d;
+  }
+
+  /* État de saisie complet (format de Scenario.defauts) */
   function lireEtat() {
     var rev = lire('revenue'), per = lire('investment-amount-period');
+    var rd = lire('p-retrait-debut'), rm = lire('p-retrait-montant');
     return {
       annee: ui.annee,
       revenu: isFinite(rev.v) ? rev.v : 0,
@@ -119,20 +156,31 @@
       etudiants: lireEntier('students'), parents: lireEntier('parents'),
       frequence: ui.frequence,
       versement: isFinite(per.v) ? per.v : 0,
-      dureeAns: nombre('p-duree'), rendementPct: nombre('p-rendement'), fraisPct: nombre('p-frais'),
+      initialAv: montant('av-initial'),
+      versementCea: montant('cea-period'),
+      initialCea: montant('cea-initial'),
+      dureeAns: nombre('p-duree'), rendementPct: nombre('p-rendement'), tauxGarantiPct: lire('p-garanti').vide ? 0 : nombre('p-garanti'),
+      fraisPct: nombre('p-frais'), fraisEntreePct: lire('p-frais-entree').vide ? 0 : nombre('p-frais-entree'),
+      rendementCeaPct: nombre('p-rend-cea'), fraisCeaPct: lire('p-frais-cea').vide ? 0 : nombre('p-frais-cea'), ecartCeaPct: nombre('p-ecart-cea'),
       comparPct: nombre('p-compar'), reinvestir: $('p-reinvest').checked,
       ecartPct: nombre('p-ecart'), croissancePct: nombre('p-croissance'), inflationPct: nombre('p-inflation'),
       impotInteretsPct: nombre('p-impot-interets'),
+      libres: lireLibres(),
+      retraitDebut: rd.vide ? 0 : rd.v, retraitMontant: rm.vide ? 0 : rm.v,
       ageActuel: ui.retraite ? ui.retraite.age : 0, ageDepart: ui.retraite ? ui.retraite.depart : 0
     };
   }
-
   /* Recharge un état (lien de partage, portefeuille) dans le formulaire */
   function appliquerEtat(partiel) {
     var e = Object.assign(Scenario.defauts(), partiel || {});
     if (Baremes.annees[e.annee]) { ui.annee = e.annee; $('annee-bareme').value = e.annee; majBareme(); }
+    function mt(id, v) { $(id).value = v > 0 ? fmtLibre(v) : ''; }
+    function pct(id, v) { $(id).value = fmtLibre(v); }
     $('revenue').value = e.revenu > 0 ? fmtLibre(e.revenu) : '';
-    $('investment-amount-period').value = e.versement > 0 ? fmtLibre(e.versement) : '';
+    mt('investment-amount-period', e.versement);
+    mt('av-initial', e.initialAv);
+    mt('cea-period', e.versementCea);
+    mt('cea-initial', e.initialCea);
     $('children').value = String(e.enfants);
     $('disabled-children').value = String(e.infirmes);
     $('students').value = String(e.etudiants);
@@ -142,25 +190,34 @@
     ui.chef = !!e.chef;
     ui.frequence = e.frequence;
     $('p-duree').value = String(e.dureeAns);
-    $('p-rendement').value = fmtLibre(e.rendementPct);
-    $('p-frais').value = fmtLibre(e.fraisPct);
-    $('p-compar').value = fmtLibre(e.comparPct);
-    $('p-ecart').value = fmtLibre(e.ecartPct);
-    $('p-croissance').value = fmtLibre(e.croissancePct);
-    $('p-inflation').value = fmtLibre(e.inflationPct);
+    pct('p-rendement', e.rendementPct);
+    pct('p-garanti', e.tauxGarantiPct);
+    pct('p-frais', e.fraisPct);
+    pct('p-frais-entree', e.fraisEntreePct);
+    pct('p-rend-cea', e.rendementCeaPct);
+    pct('p-frais-cea', e.fraisCeaPct);
+    pct('p-ecart-cea', e.ecartCeaPct);
+    pct('p-compar', e.comparPct);
+    pct('p-ecart', e.ecartPct);
+    pct('p-croissance', e.croissancePct);
+    pct('p-inflation', e.inflationPct);
+    pct('p-impot-interets', e.impotInteretsPct);
     $('p-reinvest').checked = !!e.reinvestir;
-    $('p-impot-interets').value = fmtLibre(e.impotInteretsPct);
+    $('libres-liste').innerHTML = '';
+    (e.libres || []).forEach(function (l) { ajouterLibre(l); });
+    $('libre-ajouter').disabled = false;
+    $('p-retrait-debut').value = e.retraitMontant > 0 ? String(e.retraitDebut) : '';
+    mt('p-retrait-montant', e.retraitMontant);
     var retraite = e.ageActuel > 0 && e.ageDepart > 0;
     $('p-retraite').checked = retraite;
     $('p-age').value = retraite ? String(e.ageActuel) : '';
     $('p-depart').value = String(retraite ? e.ageDepart : 60);
     synchroniserSupport();
-    if (e.croissancePct > 0 || e.inflationPct > 0 || e.ecartPct !== 2 || e.impotInteretsPct !== 20) $('p-avance').open = true;
+    if (e.croissancePct > 0 || e.inflationPct > 0 || e.ecartPct !== 2 || e.impotInteretsPct !== 20 || (e.libres || []).length || e.retraitMontant > 0) $('p-avance').open = true;
     majCurseur();
     majSteppers();
     calculateAndDisplay();
   }
-
   function majCurseur() {
     var r = $('revenue-r');
     var v = lire('revenue').v;
@@ -219,8 +276,16 @@
     $('revenue-err').textContent = isFinite(rev.v) ? '' : t('Saisissez un montant valide (ex. 45 000).');
     $('f-period').classList.toggle('invalide', !isFinite(per.v));
     $('period-err').textContent = isFinite(per.v) ? '' : t('Saisissez un montant valide (ex. 500).');
+    var montantsKo = false;
+    champsMontants.forEach(function (id) {
+      var ko = !isFinite(lire(id).v);
+      $(id).closest('.field').classList.toggle('invalide', ko);
+      montantsKo = montantsKo || ko;
+    });
+    $('montants-err').textContent = montantsKo ? t('Saisissez un montant valide (ex. 500).') : '';
     afficherAmbiguite('revenue', rev, 'revenue-amb');
     afficherAmbiguite('investment-amount-period', per, 'period-amb');
+    afficherAmbiguite('cea-period', lire('cea-period'), 'cea-amb');
     majRetraite();
 
     var etat = lireEtat();
@@ -228,19 +293,21 @@
     ui.calc = calc;
     var sim = calc.sim;
     var factor = calc.facteur;
-    var investment = calc.investissement;
 
-    $('lbl-period').textContent = t('Montant à investir {0}', [t(PERIODES[ui.frequence])]);
-    $('total-formule').textContent = t('{0} × {1} versement(s) par an', [fmtAmount(etat.versement), factor]);
-    animer($('investment-amount-total'), investment, fmtHtml);
+    $('lbl-period').textContent = t('Versement assurance vie {0}', [t(PERIODES[ui.frequence])]);
+    $('lbl-cea').textContent = t('Versement CEA {0}', [t(PERIODES[ui.frequence])]);
+    $('total-formule').textContent = t('Assurance vie {0} · CEA {1}', [fmtTND(calc.investissementAv), fmtTND(calc.investissementCea)]);
+    animer($('investment-amount-total'), calc.investissement, fmtHtml);
 
-    majSuggestion(sim.optimal, investment, factor);
+    majPlafonds(sim);
+    majSuggestion(sim, calc);
     majInverse(sim);
 
     var aDesResultats = etat.revenu > 0;
     var etaitCache = $('resultats').hidden;
     $('vide').hidden = aDesResultats;
     $('resultats').hidden = !aDesResultats;
+    majRappel();
     if (!aDesResultats) {
       $('resume-vocal').textContent = '';
       $('panneau-partage').hidden = true;
@@ -252,19 +319,30 @@
     afficherIndicateurs(sim);
     afficherDeductions(sim, etat);
     afficherTranches(sim);
-    afficherCourbeEconomie(sim, investment);
+    afficherCourbeEconomie(sim, sim.investissementAv);
     majProjection(calc);
     majObjectif(calc);
     majRachat();
     majPrevoyance();
     if (!$('panneau-partage').hidden) majPartage();
 
-    $('resume-vocal').textContent = t('Économie d\'impôt de {0} par an, soit {1} de réduction. Montant optimal à investir : {2}.', [fmtTND(sim.economie), fmtPct(sim.tauxReduction), fmtTND(sim.optimal)]);
+    $('resume-vocal').textContent = t('Économie d\'impôt de {0} par an, soit {1} de réduction. Montant optimal en assurance vie : {2}.', [fmtTND(sim.economie), fmtPct(sim.tauxReduction), fmtTND(sim.optimal)]);
   }
 
+  /* Montants au-delà des plafonds de déduction */
+  function majPlafonds(sim) {
+    var msg = [];
+    if (sim.horsPlafondAv > 0) msg.push(t('Assurance vie : {0} au-delà du plafond de {1} par an, non déductible.', [fmtTND(sim.horsPlafondAv), fmtTND(sim.produits.av.plafond)]));
+    if (sim.horsPlafondCea > 0) msg.push(t('CEA : {0} au-delà du plafond de {1} par an, non déductible.', [fmtTND(sim.horsPlafondCea), fmtTND(sim.produits.cea.plafond)]));
+    $('alerte-plafond').hidden = !msg.length;
+    $('alerte-plafond-texte').textContent = msg.join(' ');
+  }
   function afficherIndicateurs(sim) {
     animer($('tax-saved'), sim.economie, fmtHtml);
     $('tax-saved-monthly').textContent = fmtTND(sim.economie / 12);
+    var deux = sim.economieAv > 0.0005 && sim.economieCea > 0.0005;
+    $('repartition-economie').hidden = !deux;
+    if (deux) $('repartition-economie').textContent = t('dont assurance vie {0} · CEA {1}', [fmtTND(sim.economieAv), fmtTND(sim.economieCea)]);
     animer($('tax-reduction-rate'), sim.tauxReduction, function (v) { return v.toFixed(1).replace('.', ',') + '<span class="unit">%</span>'; });
     var circ = 263.894;
     $('gauge-fg').style.strokeDashoffset = String(circ * (1 - Math.min(sim.tauxReduction, 55) / 55));
@@ -273,6 +351,8 @@
     $('tax-before').innerHTML = fmtHtml(sim.impotAvant);
     $('tax-after').innerHTML = fmtHtml(sim.impotApres);
     $('min-tax').innerHTML = fmtHtml(sim.impotMinimum);
+    $('eco-av').innerHTML = fmtHtml(sim.economieAv);
+    $('eco-cea').innerHTML = fmtHtml(sim.economieCea);
     $('optimal-investment').innerHTML = fmtHtml(sim.optimal);
     var ref = sim.impotAvant > 0 ? sim.impotAvant : 1;
     $('bar-avant').style.width = (sim.impotAvant > 0 ? 100 : 0) + '%';
@@ -281,7 +361,6 @@
     $('bar-floor').style.display = sim.impotAvant > 0 ? '' : 'none';
     $('bar-floor').dataset.lib = t('plancher 45 %');
   }
-
   function lignesDeductions(sim, entree) {
     var det = sim.deductionsDetail;
     var d = sim.regles.deductions;
@@ -295,7 +374,8 @@
       [t('Étudiants sans bourse') + nb(entree.etudiants), det.etudiants, 'moins sous'],
       [t('Parents à charge') + nb(entree.parents), det.parents, 'moins sous'],
       [t('Revenu net imposable'), sim.revenuNet, 'total'],
-      [t('Investissement déduit'), Math.min(sim.investissement, sim.revenuNet), 'moins inv'],
+      [t('Assurance vie déduite'), Math.min(sim.deductionAv, sim.revenuNet), 'moins inv'],
+      [t('CEA déduit'), Math.min(sim.deductionCea, Math.max(0, sim.revenuNet - sim.deductionAv)), 'moins inv'],
       [t('Revenu net après investissement'), sim.revenuNetApres, 'total']
     ];
   }
@@ -341,8 +421,8 @@
       points: pointsEconomie(sim, investissement), optimal: sim.optimal, courant: investissement,
       economieCourante: Moteur.economiePourInvestissement(sim, investissement)
     }, {
-      aria: t('Courbe de l\'économie d\'impôt selon le montant investi par an'),
-      x: t('Montant investi par an (TND)'),
+      aria: t('Courbe de l\'économie d\'impôt selon le montant investi en assurance vie par an'),
+      x: t('Assurance vie investie par an (TND)'),
       optimal: t('Optimal')
     });
   }
@@ -350,21 +430,32 @@
   /* ===================================================================
      Suggestion optimale et mode inverse
      =================================================================== */
-  function majSuggestion(optimal, investment, factor) {
+  function majSuggestion(sim, calc) {
+    var optimal = sim.optimal, investment = sim.investissementAv, factor = calc.facteur;
     var box = $('suggest');
     var rec = $('optimal-recommendation');
     var etatEl = $('suggest-state');
     var btn = $('appliquer');
     var alerte = $('alerte-plancher');
+    $('suggest-texte').textContent = sim.investissementCea > 0
+      ? t('Avec votre CEA de {0}, investissez ce montant par an en assurance vie pour atteindre le plancher légal (45 %).', [fmtTND(sim.investissementCea)])
+      : t('Investissez ce montant par an en assurance vie pour réduire votre impôt au plancher légal (45 %).');
+    $('suggest-cea').textContent = sim.impotAvant > 0
+      ? t('Le CEA seul réduit l\'impôt de 40 % au plus (impôt minimum 60 %) : au-delà de {0} par an sur le CEA, un dépôt de plus ne réduit plus l\'impôt.', [fmtTND(sim.ceaUtile)])
+      : '';
+    /* Part fixe de l'assurance vie la 1re année (versement initial et libres) */
+    var fixe = Math.max(0, investment - calc.etat.versement * factor);
     if (optimal > 0) {
       box.classList.remove('vide');
       rec.innerHTML = fmtHtml(optimal);
+      var periode = Math.max(0, Math.ceil((optimal - fixe) / factor * 1000 - 1e-7) / 1000);
+      box.dataset.periode = periode;
       btn.hidden = false;
       var atteint = investment >= optimal - 0.0005;
       etatEl.hidden = !atteint;
       etatEl.innerHTML = '<svg class="ico ico-sm"><use href="#i-check"/></svg>' + t('Plancher atteint');
-      btn.disabled = Math.abs(investment - optimal) < 0.0005 * factor + 1e-9;
-      if (investment > optimal + 0.0005 * factor + 1e-9) {
+      btn.disabled = Math.abs(calc.etat.versement - periode) < 0.0005;
+      if (investment > optimal + 0.0005 * factor + 1e-9 && optimal < sim.produits.av.plafond) {
         alerte.hidden = false;
         $('alerte-texte').textContent = t('Au-delà de {0} par an, l\'investissement supplémentaire ({1}) ne réduit plus votre impôt : le plancher de 45 % est déjà atteint.', [fmtTND(optimal), fmtTND(investment - optimal)]);
       } else {
@@ -376,10 +467,9 @@
       btn.hidden = true;
       etatEl.hidden = true;
       alerte.hidden = true;
+      box.dataset.periode = 0;
     }
-    box.dataset.optimal = optimal;
   }
-
   function majInverse(sim) {
     var r = lire('inv-cible');
     var res = $('inv-res');
@@ -387,7 +477,7 @@
     btn.hidden = true;
     ui.inverse = null;
     $('bloc-inverse').classList.remove('ok', 'ko');
-    if (r.vide) { res.textContent = t('Indiquez l\'économie souhaitée : le simulateur calcule le montant à verser.'); return; }
+    if (r.vide) { res.textContent = t('Indiquez l\'économie souhaitée : le simulateur calcule le montant à verser en assurance vie, en plus de votre CEA.'); return; }
     if (!isFinite(r.v)) { res.textContent = t('Saisissez un montant valide (ex. 500).'); $('bloc-inverse').classList.add('ko'); return; }
     if (!(sim.revenu > 0)) { res.textContent = t('Saisissez d\'abord votre revenu brut annuel imposable.'); return; }
     var inv = Moteur.investissementPourEconomie(sim, r.v);
@@ -399,13 +489,13 @@
       return;
     }
     var f = FACTEURS[ui.frequence];
-    var periode = Math.ceil(inv.investissementAnnuel / f * 1000 - 1e-7) / 1000;
+    var fixe = Math.max(0, sim.investissementAv - (ui.calc ? ui.calc.etat.versement * f : 0));
+    var periode = Math.max(0, Math.ceil((inv.investissementAnnuel - fixe) / f * 1000 - 1e-7) / 1000);
     $('bloc-inverse').classList.add('ok');
-    res.textContent = t('Versez {0} par an, soit {1} {2}.', [fmtTND(periode * f), fmtTND(periode), t(PERIODES[ui.frequence])]);
+    res.textContent = t('Versez {0} par an en assurance vie, soit {1} {2}.', [fmtTND(inv.investissementAnnuel), fmtTND(periode), t(PERIODES[ui.frequence])]);
     ui.inverse = periode;
     btn.hidden = !(periode > 0);
   }
-
   /* ===================================================================
      Projection du capital
      =================================================================== */
@@ -413,20 +503,28 @@
     switch (err.code) {
       case 'duree': return t('La durée doit être un nombre entier d\'années entre 1 et {0}.', [err.max]);
       case 'rendement': return t('Le rendement annuel doit être compris entre 0 et 50 %.');
+      case 'garanti': return t('Le taux garanti doit être compris entre 0 et 20 % et ne pas dépasser le taux servi.');
       case 'frais': return t('Les frais de gestion doivent être compris entre 0 et 20 %.');
+      case 'fraisEntree': return t('Les frais sur versement doivent être compris entre 0 et 10 %.');
+      case 'rendementCea': return t('Le rendement du CEA doit être compris entre 0 et 50 %.');
+      case 'fraisCea': return t('Les frais du CEA doivent être compris entre 0 et 10 %.');
+      case 'ecartCea': return t('L\'écart entre scénarios du CEA doit être compris entre 0 et 30 points.');
       case 'compar': return t('Le taux du placement classique doit être compris entre 0 et 50 %.');
       case 'ecart': return t('L\'écart entre scénarios doit être compris entre 0 et 20 points.');
       case 'croissance': return t('La hausse annuelle doit être comprise entre 0 et 20 %.');
       case 'inflation': return t('L\'inflation doit être comprise entre 0 et 30 %.');
       case 'impotInterets': return t('L\'impôt sur les intérêts doit être compris entre 0 et 50 %.');
-      default: return '';
+      case 'libres': return t('Chaque versement libre doit avoir une année entière entre 1 et {0} et un montant positif.', [err.max]);
+      case 'retraitDebut': return t('L\'année de début des retraits doit être un nombre entier entre 1 et {0}.', [err.max]);
+      case 'retraitTot': return t('Les retraits programmés doivent commencer au plus tôt l\'année {0} (durée minimale de l\'assurance vie).', [err.min]);
+      default: return t('Saisissez un montant valide (ex. 500).');
     }
   }
-
   function ligne(libelle, valeur, classe) {
     return '<div class="tax-row' + (classe ? ' ' + classe : '') + '"><span class="l">' + echapper(libelle) + '</span><span class="v">' + valeur + '</span></div>';
   }
 
+  /* Lignes de la projection : [libellé, valeur, classe] (réutilisées par le PDF) */
   /* Lignes de la projection : [libellé, valeur, classe] (réutilisées par le PDF) */
   function lignesProjection(calc) {
     var e = calc.etat, med = calc.med;
@@ -434,6 +532,10 @@
       [t('Total versé sur {0} an(s)', [e.dureeAns]), fmtTND(med.totalVerse)],
       [t('Capital au terme (scénario médian)'), fmtTND(med.capitalFinal)]
     ];
+    if (calc.aAv && calc.aCea) {
+      l.push([t('dont assurance vie'), fmtTND(calc.medAv.capitalFinal)], [t('dont CEA'), fmtTND(calc.medCea.capitalFinal)]);
+    }
+    if (med.totalRetire > 0) l.push([t('Retraits programmés perçus'), fmtTND(med.totalRetire)]);
     if (e.inflationPct > 0) l.push([t('Capital au terme en dinars constants (inflation {0})', [fmtPct(e.inflationPct)]), fmtTND(med.capitalFinalReel)]);
     if (e.croissancePct > 0) l.push([t('Versement de la dernière année (hausse de {0} par an)', [fmtPct(e.croissancePct)]), fmtTND(med.flux[med.flux.length - 1].versement * calc.facteur)]);
     l.push(
@@ -447,32 +549,38 @@
     );
     return l;
   }
-
-  function tauxScenario(calc, k) {
-    return Math.max(0, calc.etat.rendementPct + (k === 'prudent' ? -calc.sc.ecart : k === 'dynamique' ? calc.sc.ecart : 0));
+  /* Libellé des taux d'un scénario (assurance vie et/ou CEA) */
+  function libelleTaux(calc, k) {
+    var p = [];
+    if (calc.aAv) p.push((calc.aCea ? t('AV') + ' ' : '') + fmtPct(calc.taux.av[k]));
+    if (calc.aCea) p.push((calc.aAv ? t('CEA') + ' ' : '') + fmtPct(calc.taux.cea[k]));
+    return p.join(' · ');
   }
-
   function majProjection(calc) {
     var err = calc.erreur;
     $('proj-err').textContent = err ? messageErreur(err) : '';
     champsHypotheses.forEach(function (id) { $(id).closest('.field').classList.remove('invalide'); });
     if (err) {
-      var id = { duree: 'p-duree', rendement: 'p-rendement', frais: 'p-frais', compar: 'p-compar', ecart: 'p-ecart', croissance: 'p-croissance', inflation: 'p-inflation', impotInterets: 'p-impot-interets' }[err.code];
+      var id = { duree: 'p-duree', rendement: 'p-rendement', 'garanti': 'p-garanti', frais: 'p-frais', fraisEntree: 'p-frais-entree', rendementCea: 'p-rend-cea', fraisCea: 'p-frais-cea', ecartCea: 'p-ecart-cea', compar: 'p-compar', ecart: 'p-ecart', croissance: 'p-croissance', inflation: 'p-inflation', impotInterets: 'p-impot-interets', retraitDebut: 'p-retrait-debut', retraitTot: 'p-retrait-debut' }[err.code];
       if (id) $(id).closest('.field').classList.add('invalide');
-      if (['p-ecart', 'p-croissance', 'p-inflation', 'p-impot-interets'].indexOf(id) !== -1) $('p-avance').open = true;
+      if (['p-ecart', 'p-croissance', 'p-inflation', 'p-impot-interets', 'p-retrait-debut'].indexOf(id) !== -1 || err.code === 'libres') $('p-avance').open = true;
     }
     var actif = calc.actif;
     $('proj-vide').hidden = actif || !!err;
     $('proj-resultat').hidden = !actif;
     $('carte-rachat').hidden = !actif;
-    $('carte-prevoyance').hidden = !actif;
+    $('carte-prevoyance').hidden = !actif || !calc.aAv;
     if (!actif) return;
 
     var sc = calc.sc;
     ['prudent', 'median', 'dynamique'].forEach(function (k) {
-      $('scen-l-' + k).textContent = t(NOMS_SCEN[k]) + ' · ' + fmtPct(tauxScenario(calc, k));
+      $('scen-l-' + k).textContent = t(NOMS_SCEN[k]) + ' · ' + libelleTaux(calc, k);
       $('scen-' + k).textContent = fmtTND(sc[k].capitalFinal);
     });
+    var e = calc.etat;
+    $('p-participation').textContent = e.tauxGarantiPct > 0
+      ? t('Dont taux garanti {0} et participation aux bénéfices estimée {1}. Le scénario prudent ne descend pas sous le taux garanti.', [fmtPct(e.tauxGarantiPct), fmtPct(Math.max(0, e.rendementPct - e.tauxGarantiPct))])
+      : t('Indiquez le taux minimum garanti du contrat : le scénario prudent ne descendra pas en dessous.');
     var reel = calc.etat.inflationPct > 0;
     $('graph-capital').innerHTML = Graph.courbeCapital(sc, { aria: t('Capital constitué par année selon trois scénarios de rendement'), x: t('Années') }, reel);
     $('leg-reel').hidden = !reel;
@@ -484,7 +592,7 @@
   function elementsComparatif(calc) {
     var e = calc.etat;
     return [
-      [t('Assurance vie ou CEA : capital + économie d\'impôt'), calc.valeurTotale, 'c1'],
+      [t('Assurance vie et CEA : capital + économie d\'impôt'), calc.valeurTotale, 'c1'],
       [t('Placement classique à {0}, avant impôt', [fmtPct(e.comparPct)]), calc.classique, 'c2'],
       [t('Placement classique à {0}, après impôt sur les intérêts ({1})', [fmtPct(e.comparPct), fmtPct(calc.impotInteretsPct)]), calc.classiqueNet, 'c3'],
       [t('Versements cumulés'), calc.med.totalVerse, 'c4']
@@ -540,7 +648,7 @@
     if (!o || !(o.versement > 0)) { res.textContent = ''; return; }
     var f = calc.facteur;
     $('bloc-objectif').classList.add('ok');
-    res.textContent = t('Versez {0} {1} (soit {2} par an) pour atteindre {3} en {4} ans.', [fmtTND(o.versement), t(PERIODES[calc.etat.frequence]), fmtTND(o.versement * f), fmtTND(o.capital), calc.etat.dureeAns]) +
+    res.textContent = t('Versez {0} {1} en assurance vie (soit {2} par an) pour atteindre un capital total de {3} en {4} ans.', [fmtTND(o.versement), t(PERIODES[calc.etat.frequence]), fmtTND(o.versement * f), fmtTND(o.capital), calc.etat.dureeAns]) +
       (calc.etat.croissancePct > 0 ? ' ' + t('Montant de la première année, puis en hausse de {0} par an.', [fmtPct(calc.etat.croissancePct)]) : '');
     ui.objectif = o.versement;
     btn.hidden = Math.abs(o.versement - calc.etat.versement) < 0.0005;
@@ -557,8 +665,9 @@
   }
 
   function lignesRachat(r) {
-    var l = [
-      [t('Capital racheté en fin d\'année {0} ({1})', [r.annee, fmtPct(r.partPct)]), fmtTND(r.capitalRachete)],
+    var cea = r.produit === 'cea';
+    return [
+      [t(cea ? 'Montant retiré du CEA en fin d\'année {0} ({1})' : 'Capital racheté en fin d\'année {0} ({1})', [r.annee, fmtPct(r.partPct)]), fmtTND(r.capitalRachete)],
       [t('Pénalité de rachat'), (r.penalite > 0 ? '− ' : '') + fmtTND(r.penalite)],
       [t('Montant réintégré au revenu imposable'), fmtTND(r.montantReintegre)],
       [t('Impôt supplémentaire dû (réintégration)'), (r.impotReintegration > 0 ? '− ' : '') + fmtTND(r.impotReintegration)],
@@ -568,13 +677,16 @@
       [t('Économies d\'impôt déjà obtenues sur cette part'), fmtTND(r.economieObtenue)],
       [t('Coût total de la sortie (pénalité + impôt)'), fmtTND(r.coutSortie), r.coutSortie > 0 ? 'perte' : '']
     ];
-    return l;
   }
-
   function majRachat() {
     var calc = ui.calc;
     ui.rachat = null;
     if (!calc || !calc.actif) return;
+    $('bloc-r-produit').hidden = !(calc.aAv && calc.aCea);
+    if (!calc.aAv) ui.produitRachat = 'cea';
+    if (!calc.aCea) ui.produitRachat = 'av';
+    selectionnerSegment('r-produit', ui.produitRachat);
+    var cea = ui.produitRachat === 'cea';
     var duree = calc.etat.dureeAns;
     bornerAnnee('r-annee', duree);
     var a = nombre('r-annee'), part = nombre('r-part'), pen = lire('r-penalite').vide ? 0 : nombre('r-penalite');
@@ -583,22 +695,57 @@
     else if (!(part > 0 && part <= 100)) err = t('La part rachetée doit être comprise entre 0 et 100 %.');
     else if (!(pen >= 0 && pen < 100)) err = t('La pénalité doit être comprise entre 0 et 100 %.');
     $('rachat-err').textContent = err;
-    if (err) { $('rachat-res').innerHTML = ''; return; }
-    var r = Rachat.simuler(calc, { annee: a, partPct: part, penalitePct: pen });
+    if (err) { $('rachat-res').innerHTML = ''; majAvance(); return; }
+    var r = Rachat.simuler(calc, { produit: ui.produitRachat, annee: a, partPct: part, penalitePct: pen });
     ui.rachat = r;
-    var statut = r.anticipe
-      ? '<div class="statut ko"><svg class="ico ico-sm"><use href="#i-alert"/></svg><span>' + echapper(t('Rachat avant {0} ans : les montants déduits sont réintégrés au revenu imposable de l\'année du rachat.', [r.dureeMinimale])) + '</span></div>'
-      : '<div class="statut ok"><svg class="ico ico-sm"><use href="#i-check"/></svg><span>' + echapper(t('Contrat d\'au moins {0} ans : pas de réintégration fiscale.', [r.dureeMinimale])) + '</span></div>';
+    var msg = cea
+      ? (r.anticipe ? t('Retrait du CEA : les dépôts encore bloqués (moins de {0} ans) sont réintégrés au revenu imposable de l\'année du retrait.', [r.dureeMinimale])
+                    : t('Tous les dépôts ont passé la période de blocage de {0} ans : pas de réintégration fiscale.', [r.dureeMinimale]))
+      : (r.anticipe ? t('Rachat avant {0} ans : les montants déduits sont réintégrés au revenu imposable de l\'année du rachat.', [r.dureeMinimale])
+                    : t('Contrat d\'au moins {0} ans : pas de réintégration fiscale.', [r.dureeMinimale]));
+    var statut = '<div class="statut ' + (r.anticipe ? 'ko' : 'ok') + '"><svg class="ico ico-sm"><use href="#' + (r.anticipe ? 'i-alert' : 'i-check') + '"/></svg><span>' + echapper(msg) + '</span></div>';
     $('rachat-res').innerHTML = statut + '<div class="tax-rows">' + lignesRachat(r).map(function (l) { return ligne(l[0], l[1], l[2]); }).join('') + '</div>';
-    $('rachat-note').textContent = t('Hypothèses : rachat en fin d\'année, scénario médian. Réintégration si le contrat a moins de {0} ans : paramètre du barème, à confirmer avec le texte officiel et les conditions du contrat.', [r.dureeMinimale]);
+    $('rachat-note').textContent = cea
+      ? t('Hypothèses : retrait en fin d\'année, scénario médian. Chaque dépôt est bloqué {0} ans à compter du 1er janvier suivant ; la part retirée des dépôts encore bloqués est réintégrée. Paramètres à confirmer avec le texte officiel.', [r.dureeMinimale])
+      : t('Hypothèses : rachat en fin d\'année, scénario médian. Réintégration si le contrat a moins de {0} ans : paramètre du barème, à confirmer avec le texte officiel et les conditions du contrat.', [r.dureeMinimale]);
+    majAvance();
   }
 
+  /* Avance sur contrat d'assurance vie, comparée à un rachat du même montant */
+  function lignesAvance(v) {
+    return [
+      [t('Capital de l\'assurance vie disponible en année {0}', [v.annee]), fmtTND(v.capitalDisponible)],
+      [t('Mensualité de remboursement'), fmtTND(v.mensualite)],
+      [t('Coût de l\'avance (intérêts)'), fmtTND(v.interets), v.interets > 0 ? 'perte' : ''],
+      [t('Coût d\'un rachat du même montant (pénalité + impôt)'), v.coutRachat === null ? '—' : fmtTND(v.coutRachat), v.coutRachat > 0 ? 'perte' : ''],
+      [v.interets <= v.coutRachat ? t('L\'avance coûte moins cher que le rachat') : t('Le rachat coûte moins cher que l\'avance'), fmtTND(Math.abs(v.coutRachat - v.interets)), 'fort']
+    ];
+  }
+
+  function majAvance() {
+    var calc = ui.calc;
+    ui.avance = null;
+    var visible = !!(calc && calc.actif && calc.aAv);
+    $('bloc-avance').hidden = !visible;
+    if (!visible) return;
+    var m = lire('a-montant'), tx = lire('a-taux'), d = lire('a-duree'), an = nombre('r-annee');
+    $('avance-err').textContent = '';
+    $('avance-res').innerHTML = '';
+    if (m.vide) return;
+    if (!(an >= 1 && an <= calc.etat.dureeAns)) return;
+    var v = Rachat.avance(calc, { annee: an, montant: m.v, tauxPct: tx.v, dureeMois: d.v, penalitePct: lire('r-penalite').vide ? 0 : nombre('r-penalite') });
+    if (!v) { $('avance-err').textContent = t('Vérifiez le montant (positif), le taux (0 à 30 %) et la durée (1 à 360 mois).'); return; }
+    if (!v.possible) { $('avance-err').textContent = t('L\'avance ne peut pas dépasser le capital de l\'assurance vie en année {0} : {1}.', [an, fmtTND(v.capitalDisponible)]); return; }
+    v.annee = an;
+    ui.avance = v;
+    $('avance-res').innerHTML = lignesAvance(v).map(function (l) { return ligne(l[0], l[1], l[2]); }).join('');
+  }
   /* ===================================================================
      Prévoyance
      =================================================================== */
   function lignesPrevoyance(p) {
     return [
-      [t('Capital au terme (scénario médian)'), fmtTND(p.capital)],
+      [t('Capital assurance vie au terme (scénario médian)'), fmtTND(p.capital)],
       p.retraite
         ? [t('Rente annuelle estimée à partir de {0} ans, pendant {1} ans', [p.retraite.depart, p.dureeRente]), fmtTND(p.rente.annuelle), 'fort']
         : [t('Rente annuelle estimée pendant {0} ans', [p.dureeRente]), fmtTND(p.rente.annuelle), 'fort'],
@@ -614,6 +761,15 @@
     ]);
   }
 
+  function lignesSortie(p) {
+    var c = p.sortie;
+    return [
+      [t('Sortie en capital, en une fois'), fmtTND(c.capital)],
+      [t('Rentes perçues au total sur {0} ans', [p.dureeRente]), fmtTND(c.totalRentes)],
+      [t('Supplément perçu grâce à la rente'), fmtSigne(c.supplement), c.supplement >= 0 ? 'fort' : 'perte'],
+      [t('Années de rente pour égaler le capital'), c.anneesPourCapital === null ? '—' : t('{0} ans', [c.anneesPourCapital])]
+    ];
+  }
   function majPrevoyance() {
     var calc = ui.calc;
     ui.prevoyance = null;
@@ -629,17 +785,20 @@
     else if (!(an >= 1 && an <= duree && Math.floor(an) === an)) err = t('L\'année du décès doit être un nombre entier entre 1 et {0}.', [duree]);
     else if (!isFinite(g.v) || !isFinite(pension.v)) err = t('Saisissez un montant valide (ex. 500).');
     $('prev-err').textContent = err;
-    if (err) { $('prev-lignes').innerHTML = ''; return; }
+    if (err) { $('prev-lignes').innerHTML = ''; $('sortie-lignes').innerHTML = ''; return; }
+    var cap = calc.medAv.capitalFinal;
     var p = {
-      capital: calc.med.capitalFinal,
+      capital: cap,
       dureeRente: dr, tauxRente: tx,
-      rente: Prev.renteEstimee(calc.med.capitalFinal, dr, tx),
-      deces: Prev.capitalDeces(calc.med.annees, an, g.v),
+      rente: Prev.renteEstimee(cap, dr, tx),
+      deces: Prev.capitalDeces(calc.medAv.annees, an, g.v),
       retraite: ui.retraite
     };
+    p.sortie = Prev.comparerSortie(cap, p.rente.annuelle, dr);
     p.revenu = pension.v > 0 ? Conseil.revenuRetraite(pension.v, p.rente.mensuelle) : null;
     ui.prevoyance = p;
     $('prev-lignes').innerHTML = lignesPrevoyance(p).map(function (l) { return ligne(l[0], l[1], l[2]); }).join('');
+    $('sortie-lignes').innerHTML = lignesSortie(p).map(function (l) { return ligne(l[0], l[1], l[2]); }).join('');
   }
 
   /* ===================================================================
@@ -726,6 +885,7 @@
   }
 
   function sauverAgence() {
+    setTimeout(majRappel, 0);
     Object.keys(CHAMPS_AGENCE).forEach(function (k) { agence[k] = $(CHAMPS_AGENCE[k]).value.trim(); });
     agence.conseiller = $('c-conseiller').value.trim();
     try { localStorage.setItem('agence', JSON.stringify(agence)); return true; } catch (e) { return false; }
@@ -762,9 +922,36 @@
     lecteur.readAsDataURL(fichier);
   }
 
+  /* Coordonnées locales du conseiller, sinon celles de la publication (js/config.js) */
+  function coordonneesAgence() {
+    var cfg = (window.ConfigSimulateur && window.ConfigSimulateur.agence) || {};
+    var local = agence.nom || agence.tel || agence.email || agence.adresse;
+    var src = local ? agence : cfg;
+    return { nom: src.nom || '', tel: src.tel || '', email: src.email || '', adresse: src.adresse || '', logo: agence.logo };
+  }
+
   function agencePourRapport() {
-    if (!agence.nom && !agence.logo) return null;
-    return { nom: agence.nom, tel: agence.tel, email: agence.email, adresse: agence.adresse, logo: agence.logo };
+    var a = coordonneesAgence();
+    if (!a.nom && !a.logo && !a.tel && !a.email) return null;
+    return a;
+  }
+
+  /* « Être rappelé » : WhatsApp vers le téléphone de l'agence, sinon e-mail */
+  function majRappel() {
+    var a = coordonneesAgence();
+    $('rappel').hidden = !(a.tel.replace(/\D/g, '').length >= 8 || /@/.test(a.email)) || $('resultats').hidden;
+  }
+
+  function demanderRappel() {
+    actualiser();
+    var a = coordonneesAgence();
+    var message = t('Bonjour, je souhaite être rappelé au sujet de ma simulation d\'assurance vie et de CEA : {0}', [lienActuel()]);
+    var chiffres = a.tel.replace(/\D/g, '');
+    if (chiffres.length >= 8) {
+      window.open('https://wa.me/' + chiffres + '?text=' + encodeURIComponent(message), '_blank', 'noopener');
+    } else if (/@/.test(a.email)) {
+      location.href = 'mailto:' + encodeURIComponent(a.email) + '?subject=' + encodeURIComponent(t('Demande de rappel : simulation d\'assurance vie et de CEA')) + '&body=' + encodeURIComponent(message);
+    }
   }
 
   /* Numéro de dossier : la référence saisie, sinon un numéro stable tiré des paramètres */
@@ -795,19 +982,21 @@
       hypotheses: [
         [t('Revenu brut annuel imposable'), fmtTND(e.revenu)],
         [t('Situation familiale'), (e.chef ? t('Chef de famille') : t('Non chef de famille')) + ' · ' + t('{0} enfant(s), {1} infirme(s), {2} étudiant(s), {3} parent(s)', [e.enfants, e.infirmes, e.etudiants, e.parents])],
-        [t('Investissement'), fmtTND(calc.investissement) + ' ' + t('par an') + ' (' + fmtTND(e.versement) + ' ' + t(PERIODES[e.frequence]) + ')']
+        [t('Assurance vie'), fmtTND(calc.investissementAv) + ' ' + t('la 1re année') + ' (' + fmtTND(e.versement) + ' ' + t(PERIODES[e.frequence]) + (e.initialAv > 0 ? ' + ' + t('versement initial {0}', [fmtTND(e.initialAv)]) : '') + ')'],
+        [t('CEA'), fmtTND(calc.investissementCea) + ' ' + t('la 1re année') + ' (' + fmtTND(e.versementCea) + ' ' + t(PERIODES[e.frequence]) + (e.initialCea > 0 ? ' + ' + t('versement initial {0}', [fmtTND(e.initialCea)]) : '') + ')'],
+        [t('Économie d\'impôt par produit'), t('assurance vie {0} · CEA {1}', [fmtTND(sim.economieAv), fmtTND(sim.economieCea)])]
       ].concat(ui.retraite ? [[t('Retraite'), t('Âge actuel {0} ans, départ à {1} ans', [ui.retraite.age, ui.retraite.depart])]] : []),
       comparatif: calc.actif ? elementsComparatif(calc).map(function (x) { return [x[0], fmtTND(x[1]), x[1]]; }) : null,
       deductions: lignesDeductions(sim, e),
-      points: pointsEconomie(sim, calc.investissement),
+      points: pointsEconomie(sim, sim.investissementAv),
       projection: calc.actif ? lignesProjection(calc) : null,
-      hypothesesProjection: calc.actif ? t('{0} ans, rendement {1}, frais {2}, écart entre scénarios ± {3} pts', [e.dureeAns, fmtPct(e.rendementPct), fmtPct(e.fraisPct), esp(nf1.format(calc.sc.ecart))]) +
+      hypothesesProjection: calc.actif ? t('{0} ans ; assurance vie : taux servi {1} (garanti {2}), frais {3}, frais sur versement {4} ; CEA : rendement {5}, frais {6}', [e.dureeAns, fmtPct(e.rendementPct), fmtPct(e.tauxGarantiPct), fmtPct(e.fraisPct), fmtPct(e.fraisEntreePct), fmtPct(e.rendementCeaPct), fmtPct(e.fraisCeaPct)]) +
         (e.croissancePct > 0 ? ', ' + t('hausse annuelle {0}', [fmtPct(e.croissancePct)]) : '') +
         (e.inflationPct > 0 ? ', ' + t('inflation {0}', [fmtPct(e.inflationPct)]) : '') +
         (e.reinvestir ? ', ' + t('économie d\'impôt réinvestie') : '') : '',
-      scenarios: calc.actif ? ['prudent', 'median', 'dynamique'].map(function (k) { return [t(NOMS_SCEN[k]) + ' · ' + fmtPct(tauxScenario(calc, k)), fmtTND(calc.sc[k].capitalFinal)]; }) : null,
-      rachat: ui.rachat ? { titre: t('Simulation de rachat anticipé'), lignes: lignesRachat(ui.rachat) } : null,
-      prevoyance: ui.prevoyance ? { titre: t('Prévoyance'), lignes: lignesPrevoyance(ui.prevoyance) } : null
+      scenarios: calc.actif ? ['prudent', 'median', 'dynamique'].map(function (k) { return [t(NOMS_SCEN[k]) + ' · ' + libelleTaux(calc, k), fmtTND(calc.sc[k].capitalFinal)]; }) : null,
+      rachat: ui.rachat ? { titre: t('Simulation de rachat anticipé') + ' · ' + t(ui.rachat.produit === 'cea' ? 'CEA' : 'Assurance vie'), lignes: lignesRachat(ui.rachat).concat(ui.avance ? [[t('Avance sur contrat de {0} sur {1} mois à {2}', [fmtTND(ui.avance.montant), nombre('a-duree'), fmtPct(nombre('a-taux'))]), '']].concat(lignesAvance(ui.avance)) : []) } : null,
+      prevoyance: ui.prevoyance ? { titre: t('Prévoyance'), lignes: lignesPrevoyance(ui.prevoyance).concat(lignesSortie(ui.prevoyance)) } : null
     };
   }
 
@@ -861,12 +1050,16 @@
   var COLONNES = [
     ['Revenu brut annuel', 'revenu', 'tnd', null],
     ['Investissement annuel', 'investissementAnnuel', 'tnd', null],
+    ['Investissement assurance vie', 'investissementAv', 'tnd', null],
+    ['Investissement CEA', 'investissementCea', 'tnd', null],
     ['Durée (ans)', 'dureeAns', 'ent', null],
     ['Économie d\'impôt annuelle', 'economie', 'tnd', 'max'],
     ['Taux de réduction', 'tauxReduction', 'pct', 'max'],
     ['Montant optimal', 'optimal', 'tnd', null],
     ['Capital prudent', 'capitalPrudent', 'tnd', null],
     ['Capital médian', 'capitalMedian', 'tnd', 'max'],
+    ['Capital assurance vie (médian)', 'capitalAv', 'tnd', null],
+    ['Capital CEA (médian)', 'capitalCea', 'tnd', null],
     ['Capital dynamique', 'capitalDynamique', 'tnd', null],
     ['Capital médian en dinars constants', 'capitalReel', 'tnd', 'max'],
     ['Total versé', 'totalVerse', 'tnd', null],
@@ -1020,7 +1213,7 @@
     majCurseur();
     planifier();
   });
-  ['revenue', 'investment-amount-period', 'inv-cible', 'v-garanti', 'v-pension', 'obj-capital'].forEach(function (id) {
+  ['revenue', 'investment-amount-period', 'inv-cible', 'v-garanti', 'v-pension', 'obj-capital', 'av-initial', 'cea-period', 'cea-initial', 'p-retrait-montant', 'a-montant'].forEach(function (id) {
     $(id).addEventListener('blur', function () {
       var r = Saisie.lireNombre(this.value);
       /* Une saisie ambiguë (« 45,000 ») est laissée telle quelle pour que l'avertissement reste visible */
@@ -1029,6 +1222,18 @@
   });
   $('investment-amount-period').addEventListener('input', planifier);
   $('inv-cible').addEventListener('input', planifier);
+  champsMontants.forEach(function (id) { $(id).addEventListener('input', planifier); });
+  $('libre-ajouter').addEventListener('click', function () { var l = ajouterLibre(); if (l) l.querySelector('.libre-annee').focus(); });
+  $('libres-liste').addEventListener('input', planifier);
+  $('libres-liste').addEventListener('click', function (e) {
+    var b = e.target.closest('.libre-suppr');
+    if (!b) return;
+    b.closest('.libre-ligne').remove();
+    $('libre-ajouter').disabled = false;
+    calculateAndDisplay();
+  });
+  ['a-montant', 'a-taux', 'a-duree'].forEach(function (id) { $(id).addEventListener('input', majAvance); });
+  $('rappel').addEventListener('click', demanderRappel);
   ['obj-capital', 'p-age', 'p-depart'].forEach(function (id) { $(id).addEventListener('input', planifier); });
   $('p-retraite').addEventListener('change', function () {
     calculateAndDisplay();
@@ -1112,6 +1317,7 @@
   function selectionnerSegment(id, val) { if (segments[id]) segments[id](val); }
   brancherSegments('chef', function (v) { ui.chef = v === '1'; calculateAndDisplay(); });
   brancherSegments('frequence', function (v) { ui.frequence = v; calculateAndDisplay(); });
+  brancherSegments('r-produit', function (v) { ui.produitRachat = v; majRachat(); });
 
   function appliquerMontantPeriode(periode) {
     $('investment-amount-period').value = fmtLibre(periode);
@@ -1119,10 +1325,10 @@
     toast(t('Montant appliqué : {0} {1}.', [fmtTND(periode), t(PERIODES[ui.frequence])]));
   }
   $('appliquer').addEventListener('click', function () {
-    var optimal = parseFloat($('suggest').dataset.optimal) || 0;
-    if (optimal <= 0) return;
-    /* Arrondi au millime supérieur : le total couvre au moins le montant optimal */
-    appliquerMontantPeriode(Math.ceil(optimal / FACTEURS[ui.frequence] * 1000 - 1e-7) / 1000);
+    /* Versement périodique (arrondi au millime supérieur) qui, avec le versement initial, atteint l'optimal */
+    var periode = parseFloat($('suggest').dataset.periode) || 0;
+    if (periode <= 0) return;
+    appliquerMontantPeriode(periode);
   });
   $('inv-appliquer').addEventListener('click', function () { actualiser(); if (ui.inverse > 0) appliquerMontantPeriode(ui.inverse); });
 
