@@ -1,12 +1,17 @@
 {
   "name": "simulateur-assurance-vie",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "description": "Simulateur d'économie d'impôt : assurance vie et Compte Épargne en Actions (CEA), en TND",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "test:e2e": "playwright test",
+    "serveur": "node e2e/serveur.js"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
   }
 }

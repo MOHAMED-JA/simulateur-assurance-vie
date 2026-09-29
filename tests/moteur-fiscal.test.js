@@ -37,8 +37,8 @@ test('l\'impôt ignore un revenu net négatif', () => {
 
 test('le détail par tranche additionne bien le total', () => {
   const d = M.impotDetaille(45321.5);
-  proche(d.byBracket.reduce((s, b) => s + b.tax, 0), d.total);
-  proche(d.byBracket.reduce((s, b) => s + b.amount, 0), 45321.5);
+  proche(d.parTranche.reduce((s, b) => s + b.impot, 0), d.total);
+  proche(d.parTranche.reduce((s, b) => s + b.montant, 0), 45321.5);
 });
 
 test('l\'impôt est croissant avec le revenu', () => {
@@ -52,27 +52,27 @@ test('l\'impôt est croissant avec le revenu', () => {
 
 test('déductions : plafonds appliqués', () => {
   const d = M.detailDeductions(45000, true, 2, 0, 1, 1);
-  assert.equal(d.professionalExpenses, 2000);
-  assert.equal(d.headOfFamily, 300);
-  assert.equal(d.children, 200);
-  assert.equal(d.students, 1000);
+  assert.equal(d.fraisProfessionnels, 2000);
+  assert.equal(d.chefDeFamille, 300);
+  assert.equal(d.enfants, 200);
+  assert.equal(d.etudiants, 1000);
   assert.equal(d.parents, 450);
   assert.equal(M.totalDeductions(d), 3950);
-  assert.equal(M.detailDeductions(0, false, 9, 0, 9, 0).children, 400);
-  assert.equal(M.detailDeductions(0, false, 9, 0, 9, 0).students, 4000);
-  proche(M.detailDeductions(8000, false, 0, 0, 0, 0).professionalExpenses, 800);
+  assert.equal(M.detailDeductions(0, false, 9, 0, 9, 0).enfants, 400);
+  assert.equal(M.detailDeductions(0, false, 9, 0, 9, 0).etudiants, 4000);
+  proche(M.detailDeductions(8000, false, 0, 0, 0, 0).fraisProfessionnels, 800);
 });
 
 test('investissement optimal : revenu net 30 000', () => {
   const impot = M.impotDetaille(30000).total;
   const opt = M.investissementOptimal(30000, impot);
-  proche(opt.optimalInvestment, 11750);
-  proche(M.impotDetaille(30000 - opt.optimalInvestment).total, impot * 0.45);
+  proche(opt.investissementOptimal, 11750);
+  proche(M.impotDetaille(30000 - opt.investissementOptimal).total, impot * 0.45);
 });
 
 test('pas d\'investissement optimal sous le seuil d\'imposition', () => {
-  assert.equal(M.investissementOptimal(4000, 0).optimalInvestment, 0);
-  assert.equal(M.investissementOptimal(5000, 0).optimalInvestment, 0);
+  assert.equal(M.investissementOptimal(4000, 0).investissementOptimal, 0);
+  assert.equal(M.investissementOptimal(5000, 0).investissementOptimal, 0);
 });
 
 test('simuler : investir l\'optimal atteint exactement le plancher de 45 %', () => {
@@ -112,7 +112,7 @@ test("appliquerImpotMinimum relève l'impôt jusqu'au minimum demandé", () => {
   const d = M.impotDetaille(15000);
   const ajuste = M.appliquerImpotMinimum(d, 2500);
   proche(ajuste.total, 2500);
-  proche(ajuste.byBracket.reduce((s, b) => s + b.tax, 0), 2500);
+  proche(ajuste.parTranche.reduce((s, b) => s + b.impot, 0), 2500);
 });
 
 test('appliquerImpotMinimum ne baisse jamais un impôt déjà supérieur au minimum', () => {

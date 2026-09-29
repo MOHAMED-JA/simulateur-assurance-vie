@@ -19,17 +19,17 @@
   function detailDeductions(revenu, chefDeFamille, enfants, enfantsInfirmes, etudiants, parents, r) {
     var d = (r || regles()).deductions;
     return {
-      professionalExpenses: Math.min(d.fraisProfessionnelsTaux * revenu, d.fraisProfessionnelsMax),
-      headOfFamily: chefDeFamille ? d.chefDeFamille : 0,
-      children: Math.min(enfants * d.enfant, d.enfantsMax),
-      disabledChildren: enfantsInfirmes * d.enfantInfirme,
-      students: Math.min(etudiants * d.etudiant, d.etudiantsMax),
+      fraisProfessionnels: Math.min(d.fraisProfessionnelsTaux * revenu, d.fraisProfessionnelsMax),
+      chefDeFamille: chefDeFamille ? d.chefDeFamille : 0,
+      enfants: Math.min(enfants * d.enfant, d.enfantsMax),
+      enfantsInfirmes: enfantsInfirmes * d.enfantInfirme,
+      etudiants: Math.min(etudiants * d.etudiant, d.etudiantsMax),
       parents: parents * d.parent
     };
   }
 
   function totalDeductions(det) {
-    return det.professionalExpenses + det.headOfFamily + det.children + det.disabledChildren + det.students + det.parents;
+    return det.fraisProfessionnels + det.chefDeFamille + det.enfants + det.enfantsInfirmes + det.etudiants + det.parents;
   }
 
   /* Impôt progressif par tranche, avec le détail de chacune */
@@ -42,9 +42,9 @@
       var impot = montant * t.taux;
       reste -= montant;
       total += impot;
-      return { min: t.min, max: t.max, rate: t.taux, amount: montant, tax: impot };
+      return { min: t.min, max: t.max, taux: t.taux, montant: montant, impot: impot };
     });
-    return { total: total, byBracket: parTranche };
+    return { total: total, parTranche: parTranche };
   }
 
   /* Ramène l'impôt au minimum légal en le répartissant sur les tranches, de la plus basse à la plus haute */
@@ -52,12 +52,12 @@
     if (details.total >= impotMinimum) return details;
     var tranches = (r || regles()).tranches;
     var reste = impotMinimum;
-    var ajuste = { total: 0, byBracket: [] };
+    var ajuste = { total: 0, parTranche: [] };
     tranches.forEach(function (t) {
       var w = largeur(t);
       var impotMax = w === Infinity ? Infinity : w * t.taux;
       var impot = reste > 0 ? Math.min(reste, impotMax) : 0;
-      ajuste.byBracket.push({ min: t.min, max: t.max, rate: t.taux, amount: t.taux > 0 ? impot / t.taux : 0, tax: impot });
+      ajuste.parTranche.push({ min: t.min, max: t.max, taux: t.taux, montant: t.taux > 0 ? impot / t.taux : 0, impot: impot });
       ajuste.total += impot;
       reste -= impot;
     });
@@ -68,7 +68,7 @@
   function investissementOptimal(revenuNet, impotInitial, r) {
     var rg = r || regles();
     if (revenuNet <= rg.tranches[0].max) {
-      return { optimalInvestment: 0, netIncomeAfter: revenuNet, taxAfter: impotInitial };
+      return { investissementOptimal: 0, revenuNetApres: revenuNet, impotApres: impotInitial };
     }
     var impotMin = rg.impotMinimumTaux * impotInitial;
     var netApres = 0;
@@ -84,7 +84,7 @@
       netApres += w;
       reste -= impotMaxTranche;
     }
-    return { optimalInvestment: Math.min(revenuNet - netApres, revenuNet), netIncomeAfter: netApres, taxAfter: impotMin };
+    return { investissementOptimal: Math.min(revenuNet - netApres, revenuNet), revenuNetApres: netApres, impotApres: impotMin };
   }
 
   /* Impôt après un investissement donné (plancher appliqué) */
@@ -94,7 +94,7 @@
     var details = impotDetaille(netApres, rg);
     var impotMin = impotInitial * rg.impotMinimumTaux;
     var ajuste = details.total < impotMin ? appliquerImpotMinimum(details, impotMin, rg) : details;
-    return { netIncomeAfter: netApres, details: ajuste };
+    return { revenuNetApres: netApres, details: ajuste };
   }
 
   /* Simulation complète : entrée = saisies de l'utilisateur, sortie = tous les chiffres affichés */
@@ -118,12 +118,12 @@
       impotAvant: avant.total,
       impotMinimum: avant.total * rg.impotMinimumTaux,
       investissement: investissement,
-      revenuNetApres: apres.netIncomeAfter,
+      revenuNetApres: apres.revenuNetApres,
       apres: apres.details,
       impotApres: apres.details.total,
       economie: economie,
       tauxReduction: avant.total > 0 ? economie / avant.total * 100 : 0,
-      optimal: investissementOptimal(revenuNet, avant.total, rg).optimalInvestment
+      optimal: investissementOptimal(revenuNet, avant.total, rg).investissementOptimal
     };
   }
 
@@ -131,6 +131,21 @@
   function economiePourInvestissement(sim, investissement) {
     var apres = impotApresInvestissement(sim.revenuNet, sim.impotAvant, investissement, sim.regles);
     return Math.max(0, sim.impotAvant - apres.details.total);
+  }
+
+  /* Mode inverse : investissement annuel minimal qui procure l'économie d'impôt visée.
+     L'économie croît avec l'investissement jusqu'au plancher légal : recherche par dichotomie.
+     Renvoie { possible, investissementAnnuel, economieMax } (économieMax = économie au plancher). */
+  function investissementPourEconomie(sim, cible) {
+    var economieMax = sim.impotAvant - sim.impotMinimum;
+    if (!(cible > 0)) return { possible: true, investissementAnnuel: 0, economieMax: economieMax };
+    if (cible > economieMax + 0.0005) return { possible: false, investissementAnnuel: null, economieMax: economieMax };
+    var bas = 0, haut = Math.max(sim.optimal, 1);
+    for (var n = 0; n < 100; n++) {
+      var milieu = (bas + haut) / 2;
+      if (economiePourInvestissement(sim, milieu) >= cible) haut = milieu; else bas = milieu;
+    }
+    return { possible: true, investissementAnnuel: haut, economieMax: economieMax };
   }
 
   return {
@@ -143,6 +158,7 @@
     investissementOptimal: investissementOptimal,
     impotApresInvestissement: impotApresInvestissement,
     simuler: simuler,
-    economiePourInvestissement: economiePourInvestissement
+    economiePourInvestissement: economiePourInvestissement,
+    investissementPourEconomie: investissementPourEconomie
   };
 });

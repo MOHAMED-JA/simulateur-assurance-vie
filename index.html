@@ -10,6 +10,14 @@
 <meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="Simulateur Assurance Vie et CEA">
 <meta property="og:description" content="Économie d'impôt, montant optimal à investir et projection du capital, en TND.">
+<meta property="og:url" content="https://mohamed-ja.github.io/simulateur-assurance-vie/">
+<meta property="og:image" content="https://mohamed-ja.github.io/simulateur-assurance-vie/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <script>
   /* Thème appliqué avant l'affichage pour éviter tout flash */
   (function () {
@@ -21,9 +29,8 @@
     document.documentElement.setAttribute('data-theme', t);
   })();
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="assets/fonts/Inter-1.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/fonts.css">
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
@@ -54,6 +61,15 @@
     <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8M12 17.5v-11"/></symbol>
     <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7l10-5z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></symbol>
     <symbol id="i-scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1ZM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-columns" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+    <symbol id="i-umbrella" viewBox="0 0 24 24"><path d="M22 12a10 10 0 0 0-20 0Z"/><path d="M12 12v8a2 2 0 0 0 4 0M12 2v1"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
   </defs>
 </svg>
 
@@ -64,12 +80,17 @@
       <span class="brand-name">Assurance vie &amp; CEA <span class="brand-tag">TND</span></span>
     </a>
     <div class="top-actions">
+      <select class="btn btn-ghost btn-sm select-annee" id="langue" aria-label="Langue" title="Langue">
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+        <option value="ar">العربية</option>
+      </select>
       <select class="btn btn-ghost btn-sm select-annee" id="annee-bareme" aria-label="Année du barème" hidden></select>
       <button type="button" class="btn btn-ghost btn-sm" id="mode-conseiller" aria-pressed="false" title="Ajoute les références du client et du conseiller au rapport">
         <svg class="ico ico-sm"><use href="#i-users"/></svg><span class="lib-btn">Mode conseiller</span>
       </button>
-      <button type="button" class="btn btn-ghost btn-sm js-pdf" id="exporter-pdf" title="Ouvre la boîte d'impression : choisir « Enregistrer au format PDF »">
-        <svg class="ico ico-sm"><use href="#i-receipt"/></svg><span>PDF</span>
+      <button type="button" class="btn btn-ghost btn-sm js-pdf" id="exporter-pdf" title="Télécharge le rapport au format PDF">
+        <svg class="ico ico-sm"><use href="#i-receipt"/></svg><span class="lib-btn">PDF</span>
       </button>
       <button class="btn btn-ghost btn-sm btn-icon theme-btn" id="theme-toggle" aria-label="Basculer le thème clair / sombre" title="Thème clair / sombre">
         <svg class="ico ico-moon"><use href="#i-moon"/></svg>
@@ -141,6 +162,7 @@
             <input class="range" type="range" id="revenue-r" min="0" max="200000" step="1000" value="0" aria-label="Revenu brut annuel, curseur" tabindex="-1">
             <div class="range-scale"><span>0</span><span>100 k</span><span>200 k</span></div>
             <p class="field-err" id="revenue-err"></p>
+            <p class="field-warn" id="revenue-amb" hidden></p>
           </div>
 
           <div class="field">
@@ -215,6 +237,7 @@
               <span class="suffix">TND</span>
             </div>
             <p class="field-err" id="period-err"></p>
+            <p class="field-warn" id="period-amb" hidden></p>
           </div>
           <div class="total-box" aria-live="polite">
             <span class="t-lbl">Montant total à investir<small id="total-formule">0 × 12 versements par an</small></span>
@@ -234,6 +257,19 @@
         <div class="alerte" id="alerte-plancher" hidden>
           <svg class="ico ico-sm"><use href="#i-alert"/></svg>
           <span id="alerte-texte"></span>
+        </div>
+
+        <div class="inverse" id="bloc-inverse">
+          <div class="field">
+            <div class="field-top"><label for="inv-cible">Mode inverse : économie d'impôt annuelle visée</label></div>
+            <div class="input-wrap">
+              <svg class="ico"><use href="#i-target"/></svg>
+              <input id="inv-cible" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 1 500" aria-describedby="inv-res">
+              <span class="suffix">TND</span>
+            </div>
+          </div>
+          <p class="inv-res" id="inv-res" aria-live="polite"></p>
+          <button type="button" class="btn btn-ghost btn-sm" id="inv-appliquer" hidden><svg class="ico ico-sm"><use href="#i-check"/></svg>Appliquer ce montant</button>
         </div>
       </section>
     </div>
@@ -255,7 +291,19 @@
       </div>
 
       <div class="results" id="resultats" hidden>
-        <div class="barre-rapport"><button type="button" class="btn btn-primaire js-pdf"><svg class="ico"><use href="#i-download"/></svg>Télécharger le rapport PDF</button><span>Dans la fenêtre qui s'ouvre, choisissez « Enregistrer au format PDF ».</span></div>
+        <div class="barre-rapport">
+          <button type="button" class="btn btn-primaire js-pdf"><svg class="ico"><use href="#i-download"/></svg>Télécharger le rapport PDF</button>
+          <button type="button" class="btn btn-ghost" id="partager"><svg class="ico"><use href="#i-share"/></svg>Partager la simulation</button>
+          <button type="button" class="btn btn-ghost" id="enregistrer"><svg class="ico"><use href="#i-save"/></svg>Enregistrer</button>
+          <div class="partage" id="panneau-partage" hidden>
+            <label for="lien-partage">Lien de la simulation (les noms du client et du conseiller n'y figurent pas)</label>
+            <div class="partage-ligne">
+              <input id="lien-partage" type="text" readonly>
+              <button type="button" class="btn btn-ghost btn-sm" id="copier-lien"><svg class="ico ico-sm"><use href="#i-share"/></svg>Copier</button>
+            </div>
+            <div class="qr" id="qr-lien" role="img" aria-label="QR code du lien de la simulation"></div>
+          </div>
+        </div>
         <div class="kpis">
           <div class="kpi k-green">
             <div class="kpi-label"><span class="pastille"><svg class="ico ico-sm"><use href="#i-piggy"/></svg></span>Économie d'impôt</div>
@@ -323,7 +371,7 @@
             <div><h2 class="card-title" id="t-courbe">Économie selon le montant investi</h2><p class="card-sub">Le gain s'arrête au plancher légal de 45 %</p></div>
           </div>
           <div id="graph-economie"></div>
-          <p class="legende"><span class="pt"></span>Votre montant actuel · <span class="tr"></span>Montant optimal</p>
+          <p class="legende"><span class="pt"></span><span>Votre montant actuel</span> <span class="tr"></span><span>Montant optimal</span></p>
         </section>
 
         <section class="card" aria-labelledby="t-proj">
@@ -349,6 +397,33 @@
               <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-compar" type="text" inputmode="decimal" autocomplete="off" value="4"><span class="suffix">%</span></div>
             </div>
           </div>
+          <details class="avance" id="p-avance">
+            <summary>Hypothèses avancées : support, hausse des revenus, inflation</summary>
+            <div class="proj-champs">
+              <div class="field">
+                <div class="field-top"><label for="p-support">Type de support</label></div>
+                <div class="input-wrap"><select id="p-support">
+                  <option value="euros">Fonds en euros (écart ± 1 pt)</option>
+                  <option value="equilibre" selected>Multisupport équilibré (écart ± 2 pts)</option>
+                  <option value="dynamique">Unités de compte dynamiques (écart ± 4 pts)</option>
+                  <option value="perso">Personnalisé</option>
+                </select></div>
+              </div>
+              <div class="field">
+                <div class="field-top"><label for="p-ecart">Écart entre scénarios</label></div>
+                <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-ecart" type="text" inputmode="decimal" autocomplete="off" value="2"><span class="suffix">pts</span></div>
+              </div>
+              <div class="field">
+                <div class="field-top"><label for="p-croissance">Hausse annuelle du revenu et des versements</label></div>
+                <div class="input-wrap"><svg class="ico"><use href="#i-chart"/></svg><input id="p-croissance" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+              </div>
+              <div class="field">
+                <div class="field-top"><label for="p-inflation">Inflation annuelle</label></div>
+                <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-inflation" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+              </div>
+            </div>
+            <p class="hint-bloc">Le barème et les déductions restent ceux de l'année choisie pendant toute la projection. Avec une inflation, le capital est aussi présenté en dinars constants (pouvoir d'achat d'aujourd'hui).</p>
+          </details>
           <label class="case"><input type="checkbox" id="p-reinvest"><span>Réinvestir chaque année l'économie d'impôt dans le contrat</span></label>
           <p class="field-err" id="proj-err"></p>
 
@@ -360,14 +435,82 @@
               <div class="scen"><span class="scen-lbl" id="scen-l-dynamique"></span><b class="num" id="scen-dynamique"></b></div>
             </div>
             <div id="graph-capital"></div>
-            <p class="legende"><span class="l l2"></span>Dynamique <span class="l l1"></span>Médian <span class="l l3"></span>Prudent <span class="l lv"></span>Versements cumulés</p>
+            <p class="legende"><span class="l l2"></span><span>Dynamique</span> <span class="l l1"></span><span>Médian</span> <span class="l l3"></span><span>Prudent</span> <span class="l lv"></span><span>Versements cumulés</span> <span id="leg-reel" hidden><span class="l lr"></span> <span>Médian en dinars constants</span></span></p>
             <div class="tax-rows" id="proj-lignes"></div>
+            <button type="button" class="btn btn-ghost btn-sm" id="export-projection"><svg class="ico ico-sm"><use href="#i-table"/></svg>Exporter la projection annuelle (Excel)</button>
           </div>
+        </section>
+
+        <section class="card" id="carte-rachat" aria-labelledby="t-rachat" hidden>
+          <div class="card-head">
+            <span class="card-ico warm"><svg class="ico"><use href="#i-logout"/></svg></span>
+            <div><h2 class="card-title" id="t-rachat">Simulation de rachat anticipé</h2><p class="card-sub">Coût d'une sortie avant le terme</p></div>
+          </div>
+          <div class="proj-champs">
+            <div class="field">
+              <div class="field-top"><label for="r-annee">Année du rachat</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="r-annee" type="text" inputmode="numeric" autocomplete="off" value="5"><span class="suffix">an</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="r-part">Part rachetée</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="r-part" type="text" inputmode="decimal" autocomplete="off" value="100"><span class="suffix">%</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="r-penalite">Pénalité de rachat du contrat</label><span class="hint">Selon le contrat</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="r-penalite" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+            </div>
+          </div>
+          <p class="field-err" id="rachat-err"></p>
+          <div id="rachat-res"></div>
+          <div class="remark"><svg class="ico ico-sm"><use href="#i-info"/></svg><span id="rachat-note"></span></div>
+        </section>
+
+        <section class="card" id="carte-prevoyance" aria-labelledby="t-prev" hidden>
+          <div class="card-head">
+            <span class="card-ico"><svg class="ico"><use href="#i-umbrella"/></svg></span>
+            <div><h2 class="card-title" id="t-prev">Prévoyance</h2><p class="card-sub">Rente au terme et capital en cas de décès</p></div>
+          </div>
+          <div class="proj-champs">
+            <div class="field">
+              <div class="field-top"><label for="v-duree-rente">Durée de service de la rente</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="v-duree-rente" type="text" inputmode="numeric" autocomplete="off" value="20"><span class="suffix">ans</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="v-taux-rente">Taux technique</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="v-taux-rente" type="text" inputmode="decimal" autocomplete="off" value="3"><span class="suffix">%</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="v-deces-annee">Décès survenant en année</label></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="v-deces-annee" type="text" inputmode="numeric" autocomplete="off" value="5"><span class="suffix">an</span></div>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="v-garanti">Capital garanti en cas de décès</label><span class="hint">Facultatif</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-umbrella"/></svg><input id="v-garanti" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span class="suffix">TND</span></div>
+            </div>
+          </div>
+          <p class="field-err" id="prev-err"></p>
+          <div class="tax-rows" id="prev-lignes"></div>
+          <div class="remark"><svg class="ico ico-sm"><use href="#i-info"/></svg><span>Estimation indicative : la rente viagère réelle dépend des tables de mortalité et des conditions du contrat.</span></div>
         </section>
 
       </div>
     </div>
   </div>
+
+  <section class="card portefeuille" id="carte-portefeuille" aria-labelledby="t-port">
+    <div class="card-head">
+      <span class="card-ico warm"><svg class="ico"><use href="#i-users"/></svg></span>
+      <div><h2 class="card-title" id="t-port">Portefeuille du conseiller</h2><p class="card-sub">Simulations enregistrées dans ce navigateur uniquement, sans serveur</p></div>
+    </div>
+    <div class="port-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="port-comparer" disabled><svg class="ico ico-sm"><use href="#i-columns"/></svg>Comparer la sélection</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="port-export" disabled><svg class="ico ico-sm"><use href="#i-table"/></svg>Exporter en Excel</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="port-vider" disabled><svg class="ico ico-sm"><use href="#i-trash"/></svg>Tout supprimer</button>
+    </div>
+    <p class="port-vide" id="port-vide">Aucune simulation enregistrée. Utilisez « Enregistrer » à côté des résultats.</p>
+    <ul class="port-liste" id="port-liste"></ul>
+    <div class="table-wrap" id="port-comparaison" hidden tabindex="0" aria-label="Comparaison des simulations, défilable"></div>
+  </section>
 
   <aside class="avertissement" aria-label="Avertissement">
     <svg class="ico ico-sm"><use href="#i-info"/></svg>
@@ -384,8 +527,19 @@
 
 <script src="js/baremes.js"></script>
 <script src="js/moteur-fiscal.js"></script>
+<script src="js/saisie.js"></script>
 <script src="js/projection.js"></script>
+<script src="js/scenario.js"></script>
+<script src="js/rachat.js"></script>
+<script src="js/prevoyance.js"></script>
+<script src="js/partage.js"></script>
+<script src="js/export-tableur.js"></script>
+<script src="js/portefeuille.js"></script>
 <script src="js/graphiques.js"></script>
-<script src="js/interface.js"></script>
+<script src="js/i18n.js"></script>
+<script src="assets/vendor/qrcode.js" defer></script>
+<script src="assets/vendor/jspdf.umd.min.js" defer></script>
+<script src="js/pdf.js" defer></script>
+<script src="js/interface.js" defer></script>
 </body>
 </html>
