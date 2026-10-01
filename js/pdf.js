@@ -5,7 +5,7 @@
   'use strict';
 
   var W = 210, H = 297, M = 14, BAS = H - 18;
-  var C = {
+  var BASE = {
     encre: [18, 22, 49], texte: [54, 60, 92], gris: [103, 109, 140], trait: [225, 229, 240], fond: [244, 246, 251],
     indigo: [79, 70, 229], violet: [124, 58, 237], fuchsia: [192, 38, 211], vert: [5, 150, 105], vertClair: [236, 253, 245],
     orange: [234, 88, 12], rouge: [225, 29, 72], ambre: [245, 158, 11], ambreClair: [255, 247, 230], sarcelle: [20, 184, 166]
@@ -16,6 +16,14 @@
     return String(s == null ? '' : s)
       .replace(/−/g, '-').replace(/[   ]/g, ' ')
       .replace(/★/g, '*').replace(/≥/g, '>=').replace(/≤/g, '<=');
+  }
+
+  /* Palette du document : couleurs d'origine, ou celles de l'agence (principale, secondaire, tertiaire en RVB) */
+  function paletteRapport(c) {
+    var p = {};
+    Object.keys(BASE).forEach(function (k) { p[k] = BASE[k]; });
+    if (c && c.principale) { p.indigo = c.principale; p.violet = c.secondaire || c.principale; p.fuchsia = c.tertiaire || p.violet; }
+    return p;
   }
 
   function melange(a, b, p) { return [0, 1, 2].map(function (i) { return Math.round(a[i] + (b[i] - a[i]) * p); }); }
@@ -32,6 +40,8 @@
     var doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
     var t = d.t;
     var y = 0;
+    var C = paletteRapport(d.couleur);
+    var TITRE = d.proposition ? t('Proposition commerciale') : t('Rapport de simulation');
 
     function couleur(fn, c) { doc[fn](c[0], c[1], c[2]); }
     function police(taille, gras, c) {
@@ -79,7 +89,7 @@
       degrade(0, 0, W, 36);
       if (d.agence && d.agence.logo) logoAgence(M, 9, 17); else logo(M, 9, 17);
       police(17, true, [255, 255, 255]);
-      doc.text(txt(t('Rapport de simulation')), M + 22, 15.5);
+      doc.text(txt(TITRE), M + 22, 15.5);
       police(9.5, false, [255, 255, 255]);
       doc.text(txt(t('Assurance vie et CEA') + ' · ' + t('Barème : {0}', [d.bareme])), M + 22, 21.5);
       doc.text(txt(t('Édité le {0}', [d.date.toLocaleDateString(d.langue === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })])), M + 22, 26.5);
@@ -93,7 +103,7 @@
     function enteteSuite() {
       degrade(0, 0, W, 11);
       police(9, true, [255, 255, 255]);
-      doc.text(txt(t('Rapport de simulation') + ' · ' + t('Assurance vie et CEA')), M, 7.2);
+      doc.text(txt(TITRE + ' · ' + t('Assurance vie et CEA')), M, 7.2);
       doc.text(txt(t('Dossier') + ' ' + d.dossier), W - M, 7.2, { align: 'right' });
       y = 20;
     }
@@ -174,6 +184,15 @@
       }
       doc.text(txt(o.xLib), (x0 + x1) / 2, y1 + 8.5, { align: 'center' });
       o.series.forEach(function (s) {
+        if (s.bande) {
+          /* Zone entre deux courbes : haut (aller) puis bas (retour) */
+          var tour = s.bande.haut.concat(s.bande.bas.slice().reverse());
+          var relB = [];
+          for (var b = 1; b < tour.length; b++) relB.push([X(tour[b][0]) - X(tour[b - 1][0]), Y(tour[b][1]) - Y(tour[b - 1][1])]);
+          couleur('setFillColor', s.c);
+          doc.lines(relB, X(tour[0][0]), Y(tour[0][1]), [1, 1], 'F', true);
+          return;
+        }
         var pts = s.pts;
         if (s.aire) {
           couleur('setFillColor', s.aire);
@@ -210,11 +229,16 @@
         var lx = M;
         police(7.5, false, C.gris);
         o.legende.forEach(function (l) {
-          couleur('setDrawColor', l.c);
-          doc.setLineWidth(0.9);
-          if (l.pointille) doc.setLineDashPattern([1, 1], 0);
-          doc.line(lx, y - 1, lx + 6, y - 1);
-          doc.setLineDashPattern([], 0);
+          if (l.zone) {
+            couleur('setFillColor', l.c);
+            doc.rect(lx, y - 2.6, 6, 3.2, 'F');
+          } else {
+            couleur('setDrawColor', l.c);
+            doc.setLineWidth(0.9);
+            if (l.pointille) doc.setLineDashPattern([1, 1], 0);
+            doc.line(lx, y - 1, lx + 6, y - 1);
+            doc.setLineDashPattern([], 0);
+          }
           doc.text(txt(l.lib), lx + 8, y);
           lx += 12 + doc.getTextWidth(txt(l.lib));
         });
@@ -270,6 +294,104 @@
       y += 3;
     }
 
+    /* Tableau simple : colonnes = libellés, largeurs en mm (la 1re colonne alignée à gauche) */
+    function tableau(colonnes, lignes, largeurs) {
+      var total = largeurs.reduce(function (a, b) { return a + b; }, 0);
+      var k = (W - 2 * M) / total;
+      var lg = largeurs.map(function (l) { return l * k; });
+      function enTete() {
+        police(7, true, C.gris);
+        var hs = colonnes.map(function (c, i) { return doc.splitTextToSize(txt(c).toUpperCase(), lg[i] - 3); });
+        var h = Math.max.apply(null, hs.map(function (x) { return x.length; })) * 3 + 3.6;
+        couleur('setFillColor', C.fond);
+        doc.rect(M, y, W - 2 * M, h, 'F');
+        var x = M;
+        hs.forEach(function (l, i) {
+          doc.text(l, i ? x + lg[i] - 1.5 : x + 1.5, y + 4, { align: i ? 'right' : 'left' });
+          x += lg[i];
+        });
+        y += h;
+      }
+      place(16);
+      enTete();
+      lignes.forEach(function (ligne) {
+        if (place(6.2)) enTete();
+        var x = M;
+        ligne.forEach(function (v, i) {
+          police(8.2, i === 0, i === 0 ? C.encre : C.texte);
+          doc.text(txt(v), i ? x + lg[i] - 1.5 : x + 1.5, y + 4.2, { align: i ? 'right' : 'left' });
+          x += lg[i];
+        });
+        couleur('setDrawColor', C.trait);
+        doc.setLineWidth(0.2);
+        doc.line(M, y + 6, W - M, y + 6);
+        y += 6;
+      });
+      y += 3;
+    }
+
+    function puces(liste, c) {
+      liste.forEach(function (s) {
+        police(9, false, C.texte);
+        var l = doc.splitTextToSize(txt(s), W - 2 * M - 7);
+        var h = l.length * 4.1 + 2;
+        place(h);
+        couleur('setFillColor', c || C.indigo);
+        doc.circle(M + 1.6, y + 2.4, 0.9, 'F');
+        police(9, false, C.texte);
+        doc.text(l, M + 5, y + 3.4);
+        y += h;
+      });
+      y += 1;
+    }
+
+    function sectionMonteCarlo(mc) {
+      titre(mc.titre);
+      paragraphe(mc.texte, 8.5, C.gris);
+      y += 1;
+      puces(mc.phrases, C.vert);
+      var n = mc.centiles.p50.length - 1;
+      function pts(v) { return v.map(function (val, i) { return [i, val]; }); }
+      var yMax = Math.max(Math.max.apply(null, mc.centiles.p90), mc.verses[mc.verses.length - 1], mc.objectif || 0) || 1;
+      var series = [
+        { bande: { haut: pts(mc.centiles.p90), bas: pts(mc.centiles.p10) }, c: melange(C.indigo, [255, 255, 255], 0.85) },
+        { bande: { haut: pts(mc.centiles.p75), bas: pts(mc.centiles.p25) }, c: melange(C.indigo, [255, 255, 255], 0.68) },
+        { pts: pts(mc.verses), c: C.gris, pointille: true, epaisseur: 0.5 },
+        { pts: pts(mc.centiles.p50), c: C.indigo, epaisseur: 0.8 }
+      ];
+      var legende = [
+        { lib: mc.legende[0], c: melange(C.indigo, [255, 255, 255], 0.85), zone: true },
+        { lib: mc.legende[1], c: melange(C.indigo, [255, 255, 255], 0.68), zone: true },
+        { lib: mc.legende[2], c: C.indigo }, { lib: mc.legende[3], c: C.gris, pointille: true }
+      ];
+      if (mc.objectif > 0) {
+        series.push({ pts: [[0, mc.objectif], [n, mc.objectif]], c: C.vert, pointille: true, epaisseur: 0.5 });
+        legende.push({ lib: mc.legende[4], c: C.vert, pointille: true });
+      }
+      graphe({ xMax: n || 1, yMax: yMax, xLib: t('Années'), entier: true, series: series, legende: legende });
+    }
+
+    function signatures() {
+      place(62);
+      titre(t('Bon pour accord'));
+      paragraphe(t('Le client reconnaît avoir reçu cette proposition et les informations sur les produits présentés. Cette signature ne vaut pas souscription : le contrat définitif reste soumis aux conditions générales de l\'assureur.'), 8.2, C.texte);
+      y += 2;
+      var w = (W - 2 * M - 8) / 2;
+      [[t('Le client'), d.client], [t('Le conseiller'), d.conseiller || (d.agence && d.agence.nom) || '']].forEach(function (s, i) {
+        var x = M + i * (w + 8);
+        couleur('setDrawColor', C.trait);
+        doc.setLineWidth(0.4);
+        doc.roundedRect(x, y, w, 40, 2, 2, 'S');
+        police(9.5, true, C.encre);
+        doc.text(txt(s[0]), x + 4, y + 6.5);
+        if (s[1]) { police(8.5, false, C.texte); doc.text(txt(s[1]).slice(0, 48), x + 4, y + 11.5); }
+        police(7.5, false, C.gris);
+        doc.text(txt(t('Date :')), x + 4, y + 18);
+        doc.text(txt(t('Mention « Lu et approuvé » et signature')), x + 4, y + 24);
+      });
+      y += 46;
+    }
+
     function qrCode(x, yy, taille) {
       var qr = d.qr, n = qr.getModuleCount(), cote = taille / n;
       doc.setFillColor(255, 255, 255);
@@ -286,7 +408,35 @@
     var calc = d.calc, sim = calc.sim;
     enteteComplete();
 
-    if (d.agence && (d.agence.nom || d.agence.tel || d.agence.email || d.agence.adresse)) {
+    if (d.proposition) {
+      /* Couverture : destinataire, chiffres clés et recommandation */
+      police(10, false, C.gris);
+      doc.text(txt(t('Préparée pour')), M, y + 2);
+      police(20, true, C.encre);
+      doc.text(txt(d.client || t('Notre client')), M, y + 11);
+      y += 16;
+      var auteur = [d.conseiller ? t('Conseiller : {0}', [d.conseiller]) : '', d.agence && d.agence.nom ? d.agence.nom : ''].filter(Boolean).join(' · ');
+      if (auteur) { police(9.5, false, C.texte); doc.text(txt(auteur), M, y); y += 5; }
+      if (d.agence) {
+        var co = [d.agence.tel, d.agence.email, d.agence.adresse].filter(Boolean).join('   ·   ');
+        if (co) { police(8.5, false, C.gris); doc.text(doc.splitTextToSize(txt(co), W - 2 * M), M, y); y += 5; }
+      }
+      y += 4;
+      var capital = calc.actif ? (d.mc ? d.mc.centiles.p50[d.mc.centiles.p50.length - 1] : calc.sc.median.capitalFinal) : null;
+      tuiles([
+        { lib: t('Économie d\'impôt'), val: d.fmtTND(sim.economie), sous: t('par an'), c: C.vert },
+        capital != null ? { lib: t('Capital au terme (médian)'), val: d.fmtTND(capital), sous: t('dans {0} ans', [calc.etat.dureeAns]), c: C.indigo }
+          : { lib: t('Taux de réduction d\'impôt'), val: d.fmtPct(sim.tauxReduction), sous: t('55 % au maximum'), c: C.indigo },
+        { lib: t('Effort d\'épargne réel'), val: d.fmtTND(Math.max(0, calc.investissement - sim.economie) / 12), sous: t('par mois, après économie d\'impôt'), c: C.orange }
+      ]);
+      titre(t('Notre recommandation'));
+      var rec = d.recommandation;
+      rec.lignes.forEach(function (l) { rangee(l, '', 'fort'); });
+      puces([rec.economie, rec.effort].concat(rec.optimal ? [rec.optimal] : []));
+      if (d.mc) paragraphe(d.mc.fourchette, 9, C.texte);
+    }
+
+    if (!d.proposition && d.agence && (d.agence.nom || d.agence.tel || d.agence.email || d.agence.adresse)) {
       police(9, false, C.texte);
       var coords = [d.agence.tel, d.agence.email, d.agence.adresse].filter(Boolean).join('   ·   ');
       var lignesAg = coords ? doc.splitTextToSize(txt(coords), W - 2 * M - 8) : [];
@@ -298,7 +448,7 @@
       if (lignesAg.length) { police(8.5, false, C.texte); doc.text(lignesAg, M + 4, yy); }
       y += hAg + 4;
     }
-    if (d.client || d.conseiller) {
+    if (!d.proposition && (d.client || d.conseiller)) {
       couleur('setFillColor', C.fond);
       doc.roundedRect(M, y - 2, W - 2 * M, 10, 2, 2, 'F');
       police(9.5, false, C.texte);
@@ -313,13 +463,13 @@
       y += 12;
     }
 
-    tuiles([
+    if (!d.proposition) tuiles([
       { lib: t('Économie d\'impôt'), val: d.fmtTND(sim.economie), sous: t('par an'), c: C.vert },
       { lib: t('Taux de réduction d\'impôt'), val: d.fmtPct(sim.tauxReduction), sous: t('55 % au maximum'), c: C.violet },
       { lib: t('Montant optimal en assurance vie'), val: d.fmtTND(sim.optimal), sous: t('par an'), c: C.orange }
     ]);
 
-    titre(t('Hypothèses'));
+    titre(d.proposition ? t('Votre situation') : t('Hypothèses'));
     d.hypotheses.forEach(function (l) { rangee(l[0], l[1]); });
 
     titre(t('Impôt annuel'));
@@ -329,6 +479,7 @@
     if (sim.economieCea > 0) { rangee(t('Économie due à l\'assurance vie'), d.fmtTND(sim.economieAv)); rangee(t('Économie due au CEA (40 % de l\'impôt au plus)'), d.fmtTND(sim.economieCea)); }
     rangee(t('Économie d\'impôt'), d.fmtTND(sim.economie), 'fort');
 
+    if (!d.proposition) {
     titre(t('Revenu net imposable'));
     d.deductions.forEach(function (l) {
       var moins = l[2].indexOf('moins') !== -1;
@@ -349,6 +500,7 @@
       repere: sim.optimal,
       point: sim.investissementAv > 0 ? [sim.investissementAv, Math.min(sim.economie, Math.max.apply(null, pts.map(function (p) { return p[1]; })))] : null
     });
+    }
 
     if (d.projection) {
       titre(t('Projection du capital'));
@@ -376,6 +528,16 @@
         series: series, legende: legende
       });
       d.projection.forEach(function (l) { rangee(l[0], l[1], l[2]); });
+      if (d.mc) sectionMonteCarlo(d.mc);
+      if (d.strategie) {
+        titre(d.strategie.titre);
+        paragraphe(d.strategie.texte, 9, C.texte);
+        tableau(d.strategie.colonnes, d.strategie.lignes, [16, 34, 34, 40, 32]);
+      }
+      if (d.contrats) {
+        titre(d.contrats.titre);
+        tableau(d.contrats.colonnes, d.contrats.lignes, [40, 34, 34, 30, 26]);
+      }
       if (d.comparatif) {
         titre(t('Comparatif des placements au terme'));
         var maxCmp = Math.max.apply(null, d.comparatif.map(function (c) { return c[2]; })) || 1;
@@ -383,7 +545,7 @@
         d.comparatif.forEach(function (c, i) {
           police(8.5, false, C.texte);
           var lib = doc.splitTextToSize(txt(c[0]), W - 2 * M - 40);
-          place(lib.length * 3.8 + 8);
+          place(lib.length * 3.8 + 11);
           doc.text(lib, M, y + 3);
           police(9, true, C.encre);
           doc.text(txt(c[1]), W - M, y + 3, { align: 'right' });
@@ -398,11 +560,15 @@
       }
     }
 
-    if (d.rachat) {
+    if (d.proposition && d.attention && d.attention.length) {
+      titre(t('Points d\'attention'));
+      puces(d.attention, C.ambre);
+    }
+    if (d.rachat && !d.proposition) {
       titre(d.rachat.titre);
       d.rachat.lignes.forEach(function (l) { rangee(l[0], l[1], l[2]); });
     }
-    if (d.prevoyance) {
+    if (d.prevoyance && !d.proposition) {
       titre(d.prevoyance.titre);
       d.prevoyance.lignes.forEach(function (l) { rangee(l[0], l[1], l[2]); });
     }
@@ -424,6 +590,8 @@
     titre(t('Mentions légales'));
     paragraphe(t('Simulation indicative, non contractuelle.') + ' ' + t('Elle ne constitue ni un conseil en investissement ni un engagement de l\'assureur. Les rendements et les frais de la projection sont des hypothèses modifiables, non garanties : la valeur d\'un contrat peut varier à la hausse comme à la baisse. Le calcul de l\'impôt suit le Code de l\'impôt sur le revenu des personnes physiques et de l\'impôt sur les sociétés tel que saisi dans le simulateur ; seules les dispositions officielles en vigueur font foi.'), 8.2, C.texte);
 
+    if (d.proposition) signatures();
+
     /* Pied de page numéroté */
     var n = doc.getNumberOfPages();
     for (var p = 1; p <= n; p++) {
@@ -437,7 +605,7 @@
       doc.text(txt(pied), M, H - 7.5);
       doc.text(txt(t('Page {0} / {1}', [p, n])), W - M, H - 7.5, { align: 'right' });
     }
-    doc.setProperties({ title: txt(t('Rapport de simulation') + ' ' + d.dossier), subject: txt(t('Assurance vie et CEA')), creator: 'Simulateur Assurance Vie et CEA' });
+    doc.setProperties({ title: txt(TITRE + ' ' + d.dossier), subject: txt(t('Assurance vie et CEA')), creator: 'Simulateur Assurance Vie et CEA' });
     return doc.output('blob');
   }
 
@@ -447,6 +615,7 @@
     var jsPDF = racine.jspdf.jsPDF;
     var doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
     var t = d.t;
+    var C = paletteRapport(d.couleur);
     function couleur(fn, c) { doc[fn](c[0], c[1], c[2]); }
     function police(taille, gras, c) { doc.setFont('helvetica', gras ? 'bold' : 'normal'); doc.setFontSize(taille); couleur('setTextColor', c || C.encre); }
     /* En-tête en dégradé */

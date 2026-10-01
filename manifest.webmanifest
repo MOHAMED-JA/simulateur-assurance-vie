@@ -6,6 +6,9 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "categories": ["finance", "productivity"],
   "background_color": "#0b0a11",
   "theme_color": "#4f46e5",
   "icons": [
@@ -13,5 +16,10 @@
     { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
     { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Nouvelle simulation", "short_name": "Nouvelle", "url": "./?nouveau=1", "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Simulation guidée", "short_name": "Guidée", "url": "./?guide=1", "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Portefeuille", "short_name": "Portefeuille", "url": "./?portefeuille=1", "icons": [{ "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
   ]
 }

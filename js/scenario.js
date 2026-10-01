@@ -74,11 +74,11 @@
     };
   }
 
-  function simulerAnnee(e, a, m) {
+  function simulerAnnee(e, a, m, leger) {
     var g = Math.pow(1 + (e.croissancePct || 0) / 100, a - 1);
     return Moteur.simuler({
       revenu: e.revenu * g, chef: e.chef, enfants: e.enfants, infirmes: e.infirmes,
-      etudiants: e.etudiants, parents: e.parents, investissementAv: m.av, investissementCea: m.cea
+      etudiants: e.etudiants, parents: e.parents, investissementAv: m.av, investissementCea: m.cea, leger: !!leger
     }, e.annee);
   }
 
@@ -108,7 +108,7 @@
     var varie = e.croissancePct > 0 || e.initialAv > 0 || e.initialCea > 0 || Object.keys(libres).length > 0;
     var annuel = [];
     for (var a = 1; a <= e.dureeAns; a++) {
-      var s = a === 1 || !varie ? sim : simulerAnnee(e, a, montantsAnnee(e, facteur, a, libres));
+      var s = a === 1 || !varie ? sim : simulerAnnee(e, a, montantsAnnee(e, facteur, a, libres), true);
       annuel.push({ revenuNet: s.revenuNet, deductionAv: s.deductionAv, deductionCea: s.deductionCea, economie: s.economie, economieAv: s.economieAv, economieCea: s.economieCea });
     }
     var economies = annuel.map(function (x) { return x.economie; });

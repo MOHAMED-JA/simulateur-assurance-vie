@@ -137,6 +137,8 @@ test.describe('petit téléphone (320 px)', () => {
     await page.fill('#cea-period', '300');
     await page.click('#p-avance summary');
     await page.click('#libre-ajouter');
+    await page.fill('#ob-servi', '7');
+    await expect(page.locator('#mc-phrases .mc-phrase')).toHaveCount(4);
     for (const l of ['fr', 'en', 'ar']) {
       await page.selectOption('#langue', l);
       const [large, visible] = await page.evaluate(() => [window.innerWidth, document.documentElement.clientWidth]);
@@ -338,4 +340,148 @@ test('être rappelé : visible seulement si l\'agence a un téléphone ou un e-m
   await page.context().route('https://wa.me/**', (r) => r.fulfill({ status: 200, body: 'ok' }));
   const [requete] = await Promise.all([page.context().waitForEvent('request', (r) => r.url().startsWith('https://wa.me/')), page.click('#rappel')]);
   expect(requete.url()).toContain('wa.me/21671000000?text=');
+});
+
+test('mode simple : réglages avancés masqués et mémorisés', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.fill('#investment-amount-period', '500');
+  await expect(page.locator('#carte-strategie')).toBeVisible();
+  await page.click('#mode-simple');
+  await expect(page.locator('#mode-simple')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#carte-strategie')).toBeHidden();
+  await expect(page.locator('#carte-portefeuille')).toBeHidden();
+  await expect(page.locator('#carte-mc')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('body')).toHaveClass(/mode-simple/);
+  await page.click('#mode-simple');
+  await expect(page.locator('#carte-portefeuille')).toBeVisible();
+});
+
+test('simulation guidée en 3 étapes', async ({ page }) => {
+  await page.click('#guide-vide');
+  await expect(page.locator('#guide')).toBeVisible();
+  await page.click('#guide-suivant');
+  await expect(page.locator('#g-revenu-err')).not.toBeEmpty();
+  await page.fill('#g-revenu', '45000');
+  await page.click('#guide-suivant');
+  await expect(page.locator('#guide-etape-lib')).toHaveText('Étape 2 sur 3');
+  await page.locator('#g-chef [data-val="1"]').click();
+  await page.fill('#g-enfants', '2');
+  await page.click('#guide-suivant');
+  await expect(page.locator('#g-conseil')).toContainText('par mois');
+  await page.click('#g-optimal');
+  expect(nb(await page.inputValue('#g-versement'))).not.toBe('');
+  await page.click('#guide-suivant');
+  await expect(page.locator('#guide')).toBeHidden();
+  expect(nb(await page.inputValue('#revenue'))).toBe('45000');
+  expect(await page.inputValue('#children')).toBe('2');
+  await expect(page.locator('#chef [data-val="1"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#frequence [data-val="Mensuel"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('#resultats')).toBeVisible();
+});
+
+test('« Et si » et curseur temporel', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.fill('#investment-amount-period', '500');
+  await expect(page.locator('#si-versement-val')).toContainText('500');
+  await page.locator('#si-versement').fill('800');
+  await expect.poll(async () => nb(await page.inputValue('#investment-amount-period'))).toBe('800');
+  await page.locator('#si-duree').fill('20');
+  await expect.poll(() => page.inputValue('#p-duree')).toBe('20');
+  await expect(page.locator('#annee-curseur')).toHaveAttribute('max', '20');
+  await page.locator('#annee-curseur').fill('5');
+  await expect(page.locator('#lecture-annee')).toContainText('Année 5');
+  await expect(page.locator('#graph-capital .g-viseur')).toHaveCount(1);
+});
+
+test('graphiques interactifs : infobulle au survol', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'survol à la souris');
+  await page.fill('#revenue', '45000');
+  await page.fill('#investment-amount-period', '500');
+  const g = page.locator('#graph-capital svg');
+  await g.scrollIntoViewIfNeeded();
+  const b = await g.boundingBox();
+  await page.mouse.move(b.x + b.width * 0.7, b.y + b.height / 2, { steps: 2 });
+  await expect(page.locator('#graph-capital .g-infobulle')).toContainText('Médian');
+});
+
+test('Monte-Carlo, stratégie et comparateur de contrats', async ({ page }) => {
+  await page.fill('#revenue', '60000');
+  await page.fill('#investment-amount-period', '400');
+  await page.fill('#cea-period', '200');
+  await expect(page.locator('#mc-phrases .mc-phrase.fort')).toContainText('9 chances sur 10');
+  await expect(page.locator('#graph-mc .g-bande1')).toHaveCount(1);
+  await page.fill('#obj-capital', '80000');
+  await expect(page.locator('#mc-phrases .cible')).toContainText('80 000');
+  await page.fill('#mc-vol-cea', '99');
+  await expect(page.locator('#mc-err')).not.toBeEmpty();
+  await expect(page.locator('#strat-corps tr')).toHaveCount(10);
+  await expect(page.locator('#contrats-res')).toBeHidden();
+  await page.fill('#ob-servi', '7');
+  await page.fill('#ob-gestion', '0,5');
+  await expect(page.locator('#contrats-res tbody tr')).toHaveCount(2);
+  await expect(page.locator('#contrats-res tr.meilleur')).toContainText('Offre B');
+  await page.fill('#oc-servi', '3');
+  await page.fill('#oc-garanti', '5');
+  await expect(page.locator('#contrats-res td.ko')).toHaveCount(1);
+  await page.fill('#cea-period', '0');
+  await page.fill('#investment-amount-period', '600');
+  await expect(page.locator('#strat-appliquer')).toBeVisible();
+  await page.click('#strat-appliquer');
+  await expect(page.locator('.toast').last()).toContainText('Répartition appliquée');
+});
+
+test('présentation client : diapositives au clavier', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.fill('#investment-amount-period', '500');
+  await page.click('#presenter');
+  await expect(page.locator('#presentation')).toBeVisible();
+  await expect(page.locator('#pr-points .pr-point')).toHaveCount(4);
+  await expect(page.locator('#pr-diapo')).toContainText('Votre situation');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#pr-diapo')).toContainText('Votre économie d\'impôt');
+  await page.click('#pr-suivant');
+  await expect(page.locator('#pr-diapo svg')).toHaveCount(1);
+  await page.locator('#pr-points .pr-point').nth(3).click();
+  await expect(page.locator('#pr-diapo')).toContainText('Notre recommandation');
+  await expect(page.locator('#pr-suivant')).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#presentation')).toBeHidden();
+});
+
+test('agenda .ics et proposition commerciale PDF', async ({ page }) => {
+  await page.fill('#revenue', '45000');
+  await page.fill('#investment-amount-period', '500');
+  await page.fill('#cea-period', '100');
+  const [ics] = await Promise.all([page.waitForEvent('download'), page.click('#agenda')]);
+  const texte = fs.readFileSync(await ics.path(), 'utf8');
+  expect(texte).toContain('BEGIN:VCALENDAR');
+  expect(texte).toContain('SUMMARY:Versement assurance vie : 500 TND');
+  expect(texte).toContain('RRULE:FREQ=MONTHLY;INTERVAL=1;COUNT=120');
+  expect(texte).toContain('Assurance vie : 8 ans atteints');
+  const [pdf] = await Promise.all([page.waitForEvent('download'), page.click('#proposition')]);
+  expect(pdf.suggestedFilename()).toMatch(/^proposition-.*\.pdf$/);
+  const contenu = fs.readFileSync(await pdf.path()).toString('latin1');
+  expect(contenu.startsWith('%PDF')).toBe(true);
+  expect((contenu.match(/\/Type \/Page\b/g) || []).length).toBeGreaterThan(2);
+});
+
+test('couleur de l\'agence appliquée à l\'interface puis rétablie', async ({ page }) => {
+  await page.click('#mode-conseiller');
+  await page.click('#agence summary');
+  await page.locator('#ag-couleur').fill('#0f766e');
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--indigo').trim())).not.toBe('#4f46e5');
+  await expect(page.locator('meta[name="theme-color"]')).not.toHaveAttribute('content', '#4f46e5');
+  await page.reload();
+  await expect(page.locator('#style-agence')).toHaveCount(1);
+  await page.click('#mode-conseiller');
+  await page.click('#agence summary');
+  await page.click('#ag-couleur-raz');
+  await expect(page.locator('#style-agence')).toHaveCount(0);
+});
+
+test('raccourcis de l\'application installée : ?guide=1', async ({ page }) => {
+  await page.goto('/?guide=1');
+  await expect(page.locator('#guide')).toBeVisible();
+  expect(page.url()).not.toContain('guide=1');
 });

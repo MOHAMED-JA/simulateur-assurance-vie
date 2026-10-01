@@ -161,7 +161,8 @@
   }
 
   /* Simulation complète : entrée = saisies de l'utilisateur, sortie = tous les chiffres affichés.
-     entree.investissementAv (ou investissement) et entree.investissementCea : montants annuels. */
+     entree.investissementAv (ou investissement) et entree.investissementCea : montants annuels ;
+     entree.leger = true : sans recherche du montant optimal ni du CEA utile (calculs répétés). */
   function simuler(entree, cle) {
     var rg = regles(cle);
     var P = produits(rg);
@@ -200,9 +201,9 @@
       economieCea: apres.economieCea,
       tauxReduction: avant.total > 0 ? economie / avant.total * 100 : 0,
       /* Assurance vie qui complète le CEA saisi pour atteindre le plancher */
-      optimal: complementAv(revenuNet, avant.total, invCea, rg),
+      optimal: entree.leger ? null : complementAv(revenuNet, avant.total, invCea, rg),
       /* CEA au-delà duquel le dépôt ne réduit plus l'impôt, avec l'assurance vie saisie */
-      ceaUtile: ceaUtile(revenuNet, avant.total, invAv, rg)
+      ceaUtile: entree.leger ? null : ceaUtile(revenuNet, avant.total, invAv, rg)
     };
   }
 

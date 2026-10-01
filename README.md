@@ -33,11 +33,23 @@ Avec les deux produits, l'impôt ne descend jamais sous 45 % et la part de rédu
 - **Rapport PDF** (jsPDF) : en-tête et logo, numéro de dossier, indicateurs, tableaux, graphiques, rachat, prévoyance, QR code, mentions légales, pages numérotées. En arabe, le rapport est rédigé en français (les polices standard du PDF n'ont pas de glyphes arabes). Si jsPDF ne se charge pas, la boîte d'impression du navigateur prend le relais.
 - **Mode conseiller et portefeuille** : nom du client, du conseiller et référence du dossier sur le rapport ; simulations enregistrées dans le navigateur (IndexedDB, 200 au plus), rouvertes en un clic, **comparées côte à côte** (2 ou 3, meilleure valeur signalée par ★) et exportées en Excel (CSV) ; **tableau de bord** (épargne proposée, économies d'impôt, capital projeté) et **sauvegarde / restauration** du portefeuille dans un fichier, pour changer d'appareil ou de navigateur.
 - **PDF aux couleurs de l'agence** : logo, nom et coordonnées de l'agence, nom du conseiller pré-rempli ; mémorisés sur l'appareil uniquement.
+- **Aspect moderne** : fond « aurora » animé (immobile sur téléphone et si les animations sont réduites), cartes en verre dépoli, courbes qui se dessinent à l'affichage.
+- **Mode simple / expert** : le mode simple masque les réglages avancés (tranches, hypothèses détaillées, stratégie, contrats, rachat, portefeuille) ; le choix est mémorisé.
+- **Simulation guidée en 3 étapes** (revenu, famille, épargne mensuelle avec le montant optimal proposé), aussi accessible depuis le raccourci de l'application installée.
+- **« Et si… ? »** : curseurs du versement mensuel en assurance vie et de la durée, résultats recalculés en direct.
+- **Graphiques interactifs** : viseur et infobulle au survol ou au doigt (capital, économie, éventail) et **curseur temporel** qui lit le capital année par année.
+- **Projection probabiliste (Monte-Carlo)** : 5 000 trajectoires de rendements annuels (volatilité réglable par produit, assurance vie jamais sous son taux garanti), éventail 10–90 % et 25–75 %, phrases du type « 9 chances sur 10 d'avoir au moins X », probabilité de dépasser les versements et d'atteindre l'objectif de capital. Résultats reproductibles (générateur à graine).
+- **Stratégie optimale année par année** : répartition du même budget entre assurance vie et CEA qui maximise la valeur au terme (capital médian + économie d'impôt), sans CEA les 5 dernières années ; application en un clic.
+- **Comparateur de contrats** : 2 ou 3 offres d'assurance vie (taux servi, taux garanti, frais de gestion et sur versement) avec capital médian, capital au seul taux garanti, coût des frais et rendement effectif ; meilleure offre signalée par ★.
+- **Ajouter à l'agenda** : fichier `.ics` (tous agendas) avec les versements récurrents, la date des 8 ans de l'assurance vie, la fin de blocage de chaque année de dépôts CEA et le terme, avec rappels.
+- **Mode présentation client** : 4 diapositives plein écran (situation, économie, capital, recommandation), au clavier, au doigt ou à la souris.
+- **Proposition commerciale (PDF)** : couverture, recommandation, effort d'épargne réel, situation, projection et éventail Monte-Carlo, stratégie, contrats comparés, points d'attention, mentions et cadres de signature « Lu et approuvé ».
+- **Couleur de l'agence** : appliquée à l'interface (contraste vérifié) et aux PDF.
 - **Infobulles et questions fréquentes** : plancher de 45 %, scénarios et rendement effectif, rachat, rente, dinars constants.
 - **Français, anglais et arabe** (lecture de droite à gauche) ; la langue du navigateur est proposée par défaut. Les montants gardent le format tunisien dans toutes les langues.
 - Barème paramétrable par année : un sélecteur d'année apparaît dès qu'il y a plusieurs barèmes (la loi de finances 2026 n'a pas modifié le barème : un seul est affiché).
 - **QR code d'installation** : `assets/qr-installation.png` et l'affiche à imprimer `assets/affiche-installation.pdf` (aussi générée depuis la fenêtre « Installer l'application » sur ordinateur, avec les coordonnées de l'agence). Le code ouvre `…/?installer=1` : l'application s'affiche directement sur une fenêtre d'installation adaptée au téléphone (un appui sur Android, deux gestes guidés sur iPhone et iPad ; dans les navigateurs intégrés à Facebook ou Instagram, invitation à ouvrir la page dans Chrome ou Safari). Aucun site ne peut s'installer sans l'accord de l'utilisateur : c'est une règle des téléphones. L'adresse du QR code se règle dans `js/config.js` (`urlPublique`).
-- **Application installable et hors ligne** (PWA) : utilisable en agence sans réseau ; en ligne, la dernière version publiée est toujours servie.
+- **Application installable et hors ligne** (PWA) : utilisable en agence sans réseau ; en ligne, la dernière version publiée est toujours servie. Raccourcis sur l'icône (appui long) : nouvelle simulation, simulation guidée, portefeuille ; vibration légère au toucher.
 - Thème clair / sombre, adapté au mobile (dès 320 px de large).
 
 ## Organisation
@@ -61,6 +73,11 @@ js/partage.js           lien de partage (fonctions pures)
 js/export-tableur.js    exports CSV pour Excel (fonctions pures)
 js/portefeuille.js      portefeuille du conseiller (IndexedDB)
 js/conseil.js           objectif de capital, retraite, statistiques et sauvegarde du portefeuille (fonctions pures)
+js/montecarlo.js        projection probabiliste (fonctions pures)
+js/strategie.js         répartition optimale assurance vie / CEA année par année (fonctions pures)
+js/contrats.js          comparateur de contrats (fonctions pures)
+js/calendrier.js        calendrier .ics (fonctions pures)
+js/theme.js             palette de la couleur de l'agence (fonctions pures)
 js/graphiques.js        graphiques SVG
 js/i18n.js              traductions (anglais, arabe)
 js/pdf.js               rapport PDF

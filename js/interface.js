@@ -16,6 +16,11 @@
   var Port = window.Portefeuille;
   var I18n = window.I18n;
   var Conseil = window.Conseil;
+  var MonteCarlo = window.MonteCarlo;
+  var Strategie = window.Strategie;
+  var Contrats = window.Contrats;
+  var Calendrier = window.Calendrier;
+  var Theme = window.Theme;
   var t = I18n.t;
 
   var FACTEURS = Moteur.FACTEURS;
@@ -75,6 +80,7 @@
     el.lastChild.textContent = message;
     zone.appendChild(el);
     while (zone.children.length > 2) zone.removeChild(zone.firstChild);
+    vibrer(type === 'erreur' ? [20, 60, 20] : 10);
     setTimeout(function () { el.classList.add('sortie'); setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240); }, 3200);
   }
 
@@ -88,6 +94,13 @@
     a.click();
     a.parentNode.removeChild(a);
     setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  }
+
+  /* Retour haptique léger sur téléphone (sans effet ailleurs ni si les animations sont réduites) */
+  function vibrer(motif) {
+    try {
+      if (navigator.vibrate && !mouvementReduit.matches && window.matchMedia && matchMedia('(pointer: coarse)').matches) navigator.vibrate(motif || 10);
+    } catch (e) {}
   }
 
   function dateIso() { return new Date().toISOString().slice(0, 10); }
@@ -308,9 +321,11 @@
     $('vide').hidden = aDesResultats;
     $('resultats').hidden = !aDesResultats;
     majRappel();
+    majEtSi(calc);
     if (!aDesResultats) {
       $('resume-vocal').textContent = '';
       $('panneau-partage').hidden = true;
+      ui.mc = null;
       return;
     }
 
@@ -324,6 +339,10 @@
     majObjectif(calc);
     majRachat();
     majPrevoyance();
+    majStrategie(calc);
+    majContrats(calc);
+    planifierMonteCarlo(calc);
+    if (etaitCache) ['graph-economie', 'graph-capital'].forEach(function (id) { animerTrace($(id)); });
     if (!$('panneau-partage').hidden) majPartage();
 
     $('resume-vocal').textContent = t('Économie d\'impôt de {0} par an, soit {1} de réduction. Montant optimal en assurance vie : {2}.', [fmtTND(sim.economie), fmtPct(sim.tauxReduction), fmtTND(sim.optimal)]);
@@ -570,6 +589,9 @@
     $('proj-resultat').hidden = !actif;
     $('carte-rachat').hidden = !actif;
     $('carte-prevoyance').hidden = !actif || !calc.aAv;
+    $('carte-mc').hidden = !actif;
+    $('carte-strategie').hidden = !actif;
+    $('carte-contrats').hidden = !actif || !calc.aAv;
     if (!actif) return;
 
     var sc = calc.sc;
@@ -584,6 +606,7 @@
     var reel = calc.etat.inflationPct > 0;
     $('graph-capital').innerHTML = Graph.courbeCapital(sc, { aria: t('Capital constitué par année selon trois scénarios de rendement'), x: t('Années') }, reel);
     $('leg-reel').hidden = !reel;
+    majCurseurAnnee(calc);
     $('proj-lignes').innerHTML = lignesProjection(calc).map(function (l) { return ligne(l[0], l[1], l[2]); }).join('');
     afficherComparatif(calc);
   }
@@ -868,8 +891,9 @@
   }
 
   /* Agence : coordonnées et logo mémorisés sur cet appareil (localStorage), jamais transmis */
+  var COULEUR_ORIGINE = '#4f46e5';
   var CHAMPS_AGENCE = { nom: 'ag-nom', tel: 'ag-tel', email: 'ag-email', adresse: 'ag-adresse' };
-  var agence = { nom: '', tel: '', email: '', adresse: '', logo: null, conseiller: '' };
+  var agence = { nom: '', tel: '', email: '', adresse: '', logo: null, conseiller: '', couleur: '' };
 
   function chargerAgence() {
     try {
@@ -877,8 +901,11 @@
       if (d && typeof d === 'object') {
         Object.keys(CHAMPS_AGENCE).concat(['conseiller']).forEach(function (k) { if (typeof d[k] === 'string') agence[k] = d[k]; });
         if (d.logo && typeof d.logo.src === 'string' && /^data:image\/(png|jpeg);base64,/.test(d.logo.src)) agence.logo = d.logo;
+        if (typeof d.couleur === 'string' && Theme.palette(d.couleur)) agence.couleur = d.couleur;
       }
     } catch (e) {}
+    $('ag-couleur').value = agence.couleur || COULEUR_ORIGINE;
+    appliquerCouleur();
     Object.keys(CHAMPS_AGENCE).forEach(function (k) { $(CHAMPS_AGENCE[k]).value = agence[k]; });
     if (agence.conseiller && !$('c-conseiller').value) $('c-conseiller').value = agence.conseiller;
     afficherLogo();
@@ -977,6 +1004,7 @@
       dossier: numeroDossier(lien, meta.ref),
       client: meta.client, conseiller: meta.conseiller,
       agence: agencePourRapport(),
+      couleur: couleurRapport(),
       lien: lien, qr: matriceQR(lien),
       calc: calc,
       hypotheses: [
@@ -996,7 +1024,12 @@
         (e.reinvestir ? ', ' + t('économie d\'impôt réinvestie') : '') : '',
       scenarios: calc.actif ? ['prudent', 'median', 'dynamique'].map(function (k) { return [t(NOMS_SCEN[k]) + ' · ' + libelleTaux(calc, k), fmtTND(calc.sc[k].capitalFinal)]; }) : null,
       rachat: ui.rachat ? { titre: t('Simulation de rachat anticipé') + ' · ' + t(ui.rachat.produit === 'cea' ? 'CEA' : 'Assurance vie'), lignes: lignesRachat(ui.rachat).concat(ui.avance ? [[t('Avance sur contrat de {0} sur {1} mois à {2}', [fmtTND(ui.avance.montant), nombre('a-duree'), fmtPct(nombre('a-taux'))]), '']].concat(lignesAvance(ui.avance)) : []) } : null,
-      prevoyance: ui.prevoyance ? { titre: t('Prévoyance'), lignes: lignesPrevoyance(ui.prevoyance).concat(lignesSortie(ui.prevoyance)) } : null
+      prevoyance: ui.prevoyance ? { titre: t('Prévoyance'), lignes: lignesPrevoyance(ui.prevoyance).concat(lignesSortie(ui.prevoyance)) } : null,
+      mc: ui.mc ? donneesMonteCarlo(ui.mc, calc) : null,
+      strategie: ui.strategie && ui.strategie.gain > 1 ? donneesStrategie(ui.strategie) : null,
+      contrats: ui.contrats ? donneesContrats(ui.contrats) : null,
+      recommandation: recommandation(calc),
+      attention: pointsAttention(calc)
     };
   }
 
@@ -1015,14 +1048,16 @@
   }
 
   /* Génère le PDF : { blob, nom } ou null si jsPDF est indisponible ou en erreur */
-  function genererPdf() {
+  function genererPdf(proposition) {
     if (!window.RapportPDF || !window.jspdf) return null;
     /* Les polices standard du PDF n'ont pas de glyphes arabes : le rapport est alors rédigé en français */
     var langue = I18n.langue();
     if (langue === 'ar') I18n.definir('fr');
     try {
+      if (ui.calc && ui.calc.actif && !ui.mc) calculerMonteCarlo(ui.calc);
       var d = donneesRapport();
-      return { blob: window.RapportPDF.generer(d), nom: 'simulation-' + d.dossier.replace(/[^\w-]+/g, '_') + '.pdf' };
+      d.proposition = !!proposition;
+      return { blob: window.RapportPDF.generer(d), nom: (proposition ? 'proposition-' : 'simulation-') + d.dossier.replace(/[^\w-]+/g, '_') + '.pdf' };
     } catch (err) {
       if (window.console) console.error(err);
       return null;
@@ -1196,6 +1231,9 @@
     calculateAndDisplay();
     afficherPortefeuille();
     if ($('fenetre-installation').open) remplirFenetre();
+    if ($('guide').open) majGuide();
+    if (!$('presentation').hidden) { pres.liste = diapositives(); afficherDiapo(0); }
+    if (ui.mc) afficherMonteCarlo();
     if (!initial) toast(t('Langue : français'));
   }
 
@@ -1283,6 +1321,7 @@
       var input = $(id);
       input.value = String(n);
       input.classList.remove('bump'); void input.offsetWidth; input.classList.add('bump');
+      vibrer();
       majSteppers();
       calculateAndDisplay();
     });
@@ -1440,7 +1479,8 @@
   });
   function majMetaTheme() {
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'dark' ? '#0b0a11' : '#4f46e5');
+    var pal = agence.couleur ? Theme.palette(agence.couleur) : null;
+    if (m) m.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'dark' ? '#0b0a11' : (pal ? pal.principale : COULEUR_ORIGINE));
   }
 
   /* Sélecteur d'année : affiché seulement si plusieurs barèmes sont configurés */
@@ -1562,6 +1602,9 @@
   function majInstallation() {
     $('installer').hidden = estInstallee();
     if ($('fenetre-installation').open) remplirFenetre();
+    if ($('guide').open) majGuide();
+    if (!$('presentation').hidden) { pres.liste = diapositives(); afficherDiapo(0); }
+    if (ui.mc) afficherMonteCarlo();
   }
   $('installer').addEventListener('click', function () {
     /* Sur téléphone ou Chrome/Edge avec invitation disponible : fenêtre du navigateur directement */
@@ -1582,7 +1625,7 @@
     var langue = I18n.langue();
     if (langue === 'ar') I18n.definir('fr');
     try {
-      var blob = window.RapportPDF.affiche({
+      var blob = window.RapportPDF.affiche({ couleur: couleurRapport(),
         t: t, langue: I18n.langue(), lien: urlInstallation(), qr: matriceQR(urlInstallation()),
         agence: agencePourRapport()
       });
@@ -1598,6 +1641,629 @@
   });
   majInstallation();
 
+  /* ===================================================================
+     Mode simple : masque les réglages avancés (classe « expert »)
+     =================================================================== */
+  function appliquerModeSimple(actif, annoncer) {
+    document.body.classList.toggle('mode-simple', actif);
+    $('mode-simple').setAttribute('aria-pressed', String(actif));
+    try { localStorage.setItem('modeSimple', actif ? '1' : '0'); } catch (e) {}
+    if (annoncer) toast(actif ? t('Mode simple : seuls les résultats essentiels sont affichés.') : t('Mode expert : tous les réglages sont affichés.'));
+  }
+  $('mode-simple').addEventListener('click', function () { appliquerModeSimple(!document.body.classList.contains('mode-simple'), true); });
+
+  /* ===================================================================
+     « Et si… ? » : curseurs du versement mensuel et de la durée
+     =================================================================== */
+  function majEtSi(calc) {
+    var mensuel = calc.etat.versement * calc.facteur / 12;
+    var r = $('si-versement');
+    if (document.activeElement !== r) {
+      r.max = String(Math.max(2000, Math.ceil(mensuel / 500) * 500));
+      r.value = String(Math.round(mensuel / 10) * 10);
+    }
+    r.style.setProperty('--pct', (+r.value / +r.max * 100) + '%');
+    $('si-versement-val').textContent = t('{0} par mois', [fmtTND(Math.round(mensuel * 1000) / 1000)]);
+    var d = $('si-duree'), duree = calc.etat.dureeAns;
+    d.max = String(Scenario.DUREE_MAX);
+    if (document.activeElement !== d && isFinite(duree)) d.value = String(duree);
+    d.disabled = !!$('p-retraite').checked;
+    d.style.setProperty('--pct', ((+d.value - 1) / (+d.max - 1) * 100) + '%');
+    $('si-duree-val').textContent = isFinite(duree) ? t('{0} ans', [duree]) : '—';
+  }
+  $('si-versement').addEventListener('input', function () {
+    var f = FACTEURS[ui.frequence] || 12;
+    $('investment-amount-period').value = fmtLibre(Math.round(+this.value * 12 / f * 1000) / 1000);
+    this.style.setProperty('--pct', (+this.value / +this.max * 100) + '%');
+    planifier();
+  });
+  $('si-duree').addEventListener('input', function () {
+    $('p-duree').value = this.value;
+    $('si-duree-val').textContent = t('{0} ans', [+this.value]);
+    planifier();
+  });
+
+  /* ===================================================================
+     Graphiques interactifs : viseur, infobulle et curseur temporel
+     =================================================================== */
+  var DIM = Graph.dimensions;
+  function animerTrace(el) {
+    if (!el || mouvementReduit.matches) return;
+    el.classList.remove('anime');
+    void el.offsetWidth;
+    el.classList.add('anime');
+    clearTimeout(el._anime);
+    el._anime = setTimeout(function () { el.classList.remove('anime'); }, 1400);
+  }
+
+  /* info = { titre, lignes: [[classe, libellé, valeur, y (montant)]] } ; x en unités du graphique */
+  function afficherViseur(conteneur, x, info) {
+    var svg = conteneur.querySelector('svg');
+    if (!svg || !info) return;
+    var xMax = +svg.dataset.xmax || 1, yMax = +svg.dataset.ymax || 1;
+    var l = DIM.L - DIM.MG.g - DIM.MG.d, h = DIM.H - DIM.MG.h - DIM.MG.b;
+    var px = DIM.MG.g + Math.max(0, Math.min(1, x / xMax)) * l;
+    var g = svg.querySelector('.g-viseur');
+    if (!g) {
+      g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('class', 'g-viseur');
+      svg.appendChild(g);
+    }
+    var s = '<line x1="' + px + '" x2="' + px + '" y1="' + DIM.MG.h + '" y2="' + (DIM.MG.h + h) + '"/>';
+    info.lignes.forEach(function (li) {
+      if (isFinite(li[3])) s += '<circle cx="' + px + '" cy="' + (DIM.MG.h + h - Math.max(0, Math.min(1, li[3] / yMax)) * h) + '" r="4.5" class="' + li[0] + '"/>';
+    });
+    g.innerHTML = s;
+    var bulle = conteneur.querySelector('.g-infobulle');
+    if (!bulle) {
+      bulle = document.createElement('div');
+      bulle.className = 'g-infobulle';
+      bulle.setAttribute('aria-hidden', 'true');
+      conteneur.appendChild(bulle);
+    }
+    bulle.innerHTML = '<b>' + echapper(info.titre) + '</b>' + info.lignes.map(function (li) {
+      return '<span class="ib-l"><i class="ib-' + li[0] + '"></i>' + echapper(li[1]) + '<em>' + echapper(li[2]) + '</em></span>';
+    }).join('');
+    bulle.hidden = false;
+    var largeur = svg.getBoundingClientRect().width || 1;
+    var gauche = px / DIM.L * largeur;
+    var bl = bulle.offsetWidth;
+    bulle.style.left = Math.max(0, Math.min(largeur - bl, gauche + (gauche > largeur / 2 ? -bl - 12 : 12))) + 'px';
+  }
+  function masquerViseur(conteneur) {
+    var g = conteneur.querySelector('.g-viseur');
+    if (g) g.parentNode.removeChild(g);
+    var b = conteneur.querySelector('.g-infobulle');
+    if (b) b.hidden = true;
+  }
+  /* fournisseur(x) : renvoie { x (recalé), info } ou null ; entier = abscisses entières (années) */
+  function brancherGraphe(id, fournisseur, entier) {
+    var c = $(id);
+    function suivre(e) {
+      var svg = c.querySelector('svg');
+      if (!svg) return;
+      var r = svg.getBoundingClientRect();
+      var vx = (e.clientX - r.left) / r.width * DIM.L;
+      var xMax = +svg.dataset.xmax || 1;
+      var x = Math.max(0, Math.min(xMax, (vx - DIM.MG.g) / (DIM.L - DIM.MG.g - DIM.MG.d) * xMax));
+      if (entier) x = Math.round(x);
+      var res = fournisseur(x);
+      if (res) afficherViseur(c, res.x, res.info); else masquerViseur(c);
+    }
+    c.addEventListener('pointermove', suivre);
+    c.addEventListener('pointerdown', suivre);
+    c.addEventListener('pointerleave', function () {
+      masquerViseur(c);
+      if (id === 'graph-capital' && ui.anneeChoisie != null) lectureAnnee(ui.anneeChoisie, true);
+    });
+  }
+
+  function infoCapital(a) {
+    var calc = ui.calc;
+    if (!calc || !calc.actif) return null;
+    a = Math.max(0, Math.min(calc.etat.dureeAns, a));
+    var sc = calc.sc, m = sc.median.annees[a];
+    return { x: a, info: { titre: t('Année {0}', [a]), lignes: [
+      ['l2', t('Dynamique'), fmtTND(sc.dynamique.annees[a].capital), sc.dynamique.annees[a].capital],
+      ['l1', t('Médian'), fmtTND(m.capital), m.capital],
+      ['l3', t('Prudent'), fmtTND(sc.prudent.annees[a].capital), sc.prudent.annees[a].capital],
+      ['lv', t('Versements cumulés'), fmtTND(m.verse), m.verse]
+    ] } };
+  }
+  brancherGraphe('graph-capital', infoCapital, true);
+  brancherGraphe('graph-economie', function (x) {
+    var calc = ui.calc;
+    if (!calc) return null;
+    var e = Moteur.economiePourInvestissement(calc.sim, x);
+    return { x: x, info: { titre: t('{0} par an en assurance vie', [fmtTND(x)]), lignes: [
+      ['l1', t('Économie d\'impôt'), fmtTND(e), e],
+      ['lv', t('Soit par mois'), fmtTND(e / 12), NaN]
+    ] } };
+  }, false);
+  brancherGraphe('graph-mc', function (a) {
+    var mc = ui.mc, calc = ui.calc;
+    if (!mc || !calc) return null;
+    a = Math.max(0, Math.min(mc.annees.length - 1, a));
+    var c = mc.centiles;
+    return { x: a, info: { titre: t('Année {0}', [a]), lignes: [
+      ['lmc1', t('9 cas sur 10 au-dessous de'), fmtTND(c.p90[a]), c.p90[a]],
+      ['l1', t('Médiane'), fmtTND(c.p50[a]), c.p50[a]],
+      ['lmc1', t('9 cas sur 10 au-dessus de'), fmtTND(c.p10[a]), c.p10[a]],
+      ['lv', t('Versements cumulés'), fmtTND(calc.med.annees[a] ? calc.med.annees[a].verse : 0), calc.med.annees[a] ? calc.med.annees[a].verse : NaN]
+    ] } };
+  }, true);
+
+  /* Curseur temporel : lecture du capital année par année */
+  function lectureAnnee(a, viseur) {
+    var res = infoCapital(a);
+    if (!res) { $('lecture-annee').textContent = ''; return; }
+    var m = ui.calc.sc.median.annees[res.x];
+    $('annee-curseur-val').textContent = String(res.x);
+    $('lecture-annee').innerHTML = '<b>' + echapper(t('Année {0}', [res.x])) + '</b> ' + echapper(t('Capital médian {0} pour {1} versés, soit {2} de gains.', [fmtTND(m.capital), fmtTND(m.verse), fmtSigne(m.capital + (m.retire || 0) - m.verse)]));
+    if (viseur) afficherViseur($('graph-capital'), res.x, res.info);
+  }
+  function majCurseurAnnee(calc) {
+    var r = $('annee-curseur'), n = calc.etat.dureeAns;
+    var auTerme = ui.anneeChoisie == null || ui.anneeChoisie >= n;
+    r.max = String(n);
+    if (auTerme) { ui.anneeChoisie = null; r.value = String(n); }
+    else r.value = String(ui.anneeChoisie);
+    r.style.setProperty('--pct', (+r.value / n * 100) + '%');
+    lectureAnnee(+r.value, !auTerme);
+  }
+  $('annee-curseur').addEventListener('input', function () {
+    var a = +this.value;
+    ui.anneeChoisie = a >= +this.max ? null : a;
+    this.style.setProperty('--pct', (a / +this.max * 100) + '%');
+    lectureAnnee(a, true);
+  });
+
+  /* ===================================================================
+     Projection probabiliste (Monte-Carlo)
+     =================================================================== */
+  var attenteMc = null;
+  function lireVolatilites() {
+    var av = lire('mc-vol-av'), cea = lire('mc-vol-cea');
+    var ok = isFinite(av.v) && av.v >= 0 && av.v <= 20 && isFinite(cea.v) && cea.v >= 0 && cea.v <= 60;
+    $('mc-vol-av').closest('.field').classList.toggle('invalide', !(isFinite(av.v) && av.v >= 0 && av.v <= 20));
+    $('mc-vol-cea').closest('.field').classList.toggle('invalide', !(isFinite(cea.v) && cea.v >= 0 && cea.v <= 60));
+    $('mc-err').textContent = ok ? '' : t('Volatilité : entre 0 et 20 points pour l\'assurance vie, entre 0 et 60 points pour le CEA.');
+    return ok ? { av: av.v, cea: cea.v } : null;
+  }
+  function cleMc(calc, vol, objectif) { return JSON.stringify([calc.p, calc.pCea, calc.aCea, calc.etat.tauxGarantiPct, vol, objectif]); }
+  function objectifSaisi() { var o = lire('obj-capital'); return isFinite(o.v) && o.v > 0 ? o.v : 0; }
+  function calculerMonteCarlo(calc) {
+    var vol = lireVolatilites();
+    if (!vol || !calc || !calc.actif) { ui.mc = null; return null; }
+    var objectif = objectifSaisi();
+    var cle = cleMc(calc, vol, objectif);
+    if (ui.mc && ui.mcCle === cle) return ui.mc;
+    ui.mc = MonteCarlo.simuler(calc, { trajectoires: 5000, volatiliteAv: vol.av, volatiliteCea: vol.cea, objectif: objectif });
+    ui.mcCle = cle;
+    return ui.mc;
+  }
+  function phrasesMonteCarlo(mc) {
+    var p = [
+      ['fort', t('9 chances sur 10 d\'avoir au moins {0} au terme', [fmtTND(mc.finalP10)])],
+      ['', t('1 chance sur 2 de dépasser {0}', [fmtTND(mc.finalP50)])],
+      ['', t('1 chance sur 10 de dépasser {0}', [fmtTND(mc.finalP90)])],
+      ['', t('Probabilité que la valeur au terme dépasse les versements : {0}', [fmtPct(mc.probaVersements)])]
+    ];
+    if (mc.objectif > 0) p.push(['cible', t('Probabilité d\'atteindre votre objectif de {0} : {1}', [fmtTND(mc.objectif), fmtPct(mc.probaObjectif)])]);
+    return p;
+  }
+  function afficherMonteCarlo() {
+    var calc = ui.calc;
+    var premier = !$('graph-mc').querySelector('svg');
+    var mc = calculerMonteCarlo(calc);
+    if (!mc) { $('mc-phrases').innerHTML = ''; $('graph-mc').innerHTML = ''; return; }
+    $('mc-phrases').innerHTML = phrasesMonteCarlo(mc).map(function (x) { return '<p class="mc-phrase ' + x[0] + '">' + echapper(x[1]) + '</p>'; }).join('');
+    $('graph-mc').innerHTML = Graph.eventail(mc, calc.med.annees.map(function (a) { return a.verse; }), {
+      aria: t('Éventail des capitaux possibles selon 5 000 trajectoires de marché'), x: t('Années'), objectif: t('Objectif')
+    });
+    if (premier) animerTrace($('graph-mc'));
+  }
+  function planifierMonteCarlo(calc) {
+    clearTimeout(attenteMc);
+    if (!calc.actif) { ui.mc = null; return; }
+    var vol = lireVolatilites();
+    if (vol && ui.mc && ui.mcCle === cleMc(calc, vol, objectifSaisi())) return;
+    attenteMc = setTimeout(afficherMonteCarlo, 350);
+  }
+  ['mc-vol-av', 'mc-vol-cea'].forEach(function (id) { $(id).addEventListener('input', function () { if (ui.calc) planifierMonteCarlo(ui.calc); }); });
+  function donneesMonteCarlo(mc, calc) {
+    return {
+      titre: t('Projection probabiliste'),
+      texte: t('{0} trajectoires de marché simulées, volatilité {1} pour l\'assurance vie et {2} pour le CEA.', [fmtEntier(mc.trajectoires), fmtLibre(nombre('mc-vol-av')) + ' pts', fmtLibre(nombre('mc-vol-cea')) + ' pts']),
+      phrases: phrasesMonteCarlo(mc).map(function (x) { return x[1]; }),
+      centiles: mc.centiles, verses: calc.med.annees.map(function (a) { return a.verse; }), objectif: mc.objectif,
+      legende: [t('8 cas sur 10'), t('1 cas sur 2'), t('Médiane'), t('Versements cumulés'), t('Objectif')],
+      fourchette: t('Capital au terme dans 8 cas sur 10 : entre {0} et {1}', [fmtTND(mc.finalP10), fmtTND(mc.finalP90)])
+    };
+  }
+
+  /* ===================================================================
+     Stratégie optimale année par année
+     =================================================================== */
+  function majStrategie(calc) {
+    ui.strategie = null;
+    if (!calc.actif) return;
+    var st = Strategie.optimiser(calc);
+    ui.strategie = st;
+    var e = calc.etat;
+    var res = [];
+    if (st.gain > 1) res.push('<p class="strat-gain"><svg class="ico ico-sm"><use href="#i-bulb"/></svg><span>' + echapper(t('En répartissant autrement le même budget, la valeur au terme augmente de {0} (capital médian et économies d\'impôt).', [fmtTND(st.gain)])) + '</span></p>');
+    else res.push('<p class="strat-gain ok"><svg class="ico ico-sm"><use href="#i-check"/></svg><span>' + echapper(t('Votre répartition actuelle est déjà la meilleure pour ce budget.')) + '</span></p>');
+    if (!st.avValable) res.push('<p class="hint-bloc">' + echapper(t('Durée inférieure à {0} ans : la déduction de l\'assurance vie n\'est pas retenue dans ce calcul.', [st.dureeMinimaleAv])) + '</p>');
+    if (st.plan.some(function (l) { return !l.ceaPermis; })) res.push('<p class="hint-bloc">' + echapper(t('Pas de CEA les {0} dernières années : ces dépôts seraient encore bloqués au terme.', [st.dureeBlocageCea])) + '</p>');
+    $('strat-resume').innerHTML = res.join('');
+    $('strat-corps').innerHTML = st.plan.map(function (l) {
+      return '<tr><td>' + l.annee + '</td><td>' + fmtTND(l.budget) + '</td><td>' + fmtTND(l.av) + '</td><td>' + fmtTND(l.cea) +
+        ' <small>(' + fmtEntier(l.partCea) + ' %)</small></td><td class="eco">' + fmtTND(l.economie) + '</td></tr>';
+    }).join('');
+    var per = e.versement + e.versementCea;
+    var cible = repartitionConseillee(calc);
+    $('strat-appliquer').hidden = !(per > 0) || !cible || (Math.abs(cible.av - e.versement) < 0.0005 && Math.abs(cible.cea - e.versementCea) < 0.0005);
+  }
+  /* Versements périodiques (même total) selon la part de CEA conseillée la 1re année */
+  function repartitionConseillee(calc) {
+    var st = ui.strategie;
+    if (!st || !st.plan.length) return null;
+    var per = calc.etat.versement + calc.etat.versementCea;
+    var cea = Math.round(per * st.plan[0].partCea / 100 * 1000) / 1000;
+    return { av: Math.round((per - cea) * 1000) / 1000, cea: cea };
+  }
+  $('strat-appliquer').addEventListener('click', function () {
+    actualiser();
+    var c = repartitionConseillee(ui.calc);
+    if (!c) return;
+    $('investment-amount-period').value = c.av > 0 ? fmtLibre(c.av) : '0';
+    $('cea-period').value = c.cea > 0 ? fmtLibre(c.cea) : '';
+    calculateAndDisplay();
+    toast(t('Répartition appliquée : {0} en assurance vie et {1} en CEA {2}.', [fmtTND(c.av), fmtTND(c.cea), t(PERIODES[ui.frequence])]));
+  });
+  function donneesStrategie(st) {
+    return {
+      titre: t('Stratégie optimale année par année'),
+      texte: t('En répartissant autrement le même budget, la valeur au terme augmente de {0} (capital médian et économies d\'impôt).', [fmtTND(st.gain)]),
+      colonnes: [t('Année'), t('Budget'), t('Assurance vie'), t('CEA'), t('Économie d\'impôt')],
+      lignes: st.plan.map(function (l) { return [String(l.annee), fmtTND(l.budget), fmtTND(l.av), fmtTND(l.cea) + ' (' + fmtEntier(l.partCea) + ' %)', fmtTND(l.economie)]; })
+    };
+  }
+
+  /* ===================================================================
+     Comparateur de contrats d'assurance vie
+     =================================================================== */
+  var CHAMPS_OFFRE = { servi: 'tauxServi', 'garanti': 'tauxGaranti', gestion: 'fraisGestion', versement: 'fraisVersement' };
+  function lireOffres() {
+    return ['a', 'b', 'c'].map(function (k) {
+      var nom = $('o' + k + '-nom');
+      var o = { nom: nom.value.trim() || nom.placeholder, vide: lire('o' + k + '-servi').vide };
+      Object.keys(CHAMPS_OFFRE).forEach(function (c) { var r = lire('o' + k + '-' + c); o[CHAMPS_OFFRE[c]] = r.vide ? 0 : r.v; });
+      return o;
+    });
+  }
+  function majContrats(calc) {
+    ui.contrats = null;
+    if (!calc.actif || !calc.aAv) return;
+    var e = calc.etat;
+    /* L'offre A reprend les hypothèses de la projection tant qu'elle n'a pas été modifiée */
+    if (!$('carte-contrats').dataset.touche) {
+      $('oa-servi').value = fmtLibre(e.rendementPct);
+      $('oa-garanti').value = fmtLibre(e.tauxGarantiPct);
+      $('oa-gestion').value = fmtLibre(e.fraisPct);
+      $('oa-versement').value = fmtLibre(e.fraisEntreePct);
+    }
+    var offres = lireOffres().filter(function (o) { return !o.vide; });
+    var zone = $('contrats-res');
+    if (offres.length < 2) { zone.hidden = true; zone.innerHTML = ''; return; }
+    var res = Contrats.comparer(calc, offres);
+    ui.contrats = res;
+    zone.hidden = false;
+    var cols = [t('Offre'), t('Capital au terme (médian)'), t('Capital au seul taux garanti'), t('Coût des frais au terme'), t('Rendement effectif'), t('Écart')];
+    zone.innerHTML = '<table class="tranches contrats"><thead><tr>' + cols.map(function (c) { return '<th scope="col">' + echapper(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      res.map(function (r) {
+        if (!r.valide) return '<tr><th scope="row">' + echapper(r.nom) + '</th><td colspan="5" class="ko">' + echapper(t('Saisie incomplète ou incohérente (taux garanti supérieur au taux servi ?)')) + '</td></tr>';
+        return '<tr' + (r.meilleur ? ' class="meilleur"' : '') + '><th scope="row">' + (r.meilleur ? '★ ' : '') + echapper(r.nom) + '</th><td>' + fmtTND(r.capital) + '</td><td>' + fmtTND(r.capitalGaranti) +
+          '</td><td>' + fmtTND(r.frais) + '</td><td>' + fmtPct(r.rendementEffectif) + '</td><td>' + (r.meilleur ? '—' : fmtSigne(r.ecart)) + '</td></tr>';
+      }).join('') + '</tbody></table>';
+  }
+  function donneesContrats(res) {
+    return {
+      titre: t('Comparateur de contrats'),
+      colonnes: [t('Offre'), t('Capital au terme (médian)'), t('Capital au seul taux garanti'), t('Coût des frais au terme'), t('Rendement effectif')],
+      lignes: res.filter(function (r) { return r.valide; }).map(function (r) { return [(r.meilleur ? '★ ' : '') + r.nom, fmtTND(r.capital), fmtTND(r.capitalGaranti), fmtTND(r.frais), fmtPct(r.rendementEffectif)]; })
+    };
+  }
+  $('carte-contrats').addEventListener('input', function (e) {
+    if (/^oa-/.test(e.target.id)) this.dataset.touche = '1';
+    if (ui.calc) majContrats(ui.calc);
+  });
+
+  /* ===================================================================
+     Recommandation et points d'attention (présentation et proposition)
+     =================================================================== */
+  function recommandation(calc) {
+    var e = calc.etat, sim = calc.sim, per = t(PERIODES[e.frequence]);
+    var l = [];
+    if (e.versement > 0 || e.initialAv > 0) l.push(t('Assurance vie : {0} {1}', [fmtTND(e.versement), per]) + (e.initialAv > 0 ? ' + ' + t('versement initial {0}', [fmtTND(e.initialAv)]) : ''));
+    if (e.versementCea > 0 || e.initialCea > 0) l.push(t('CEA : {0} {1}', [fmtTND(e.versementCea), per]) + (e.initialCea > 0 ? ' + ' + t('versement initial {0}', [fmtTND(e.initialCea)]) : ''));
+    var effort = calc.investissement - sim.economie;
+    return {
+      lignes: l,
+      economie: t('Économie d\'impôt : {0} par an, soit {1} par mois.', [fmtTND(sim.economie), fmtTND(sim.economie / 12)]),
+      effort: t('Effort d\'épargne réel après économie d\'impôt : {0} par mois.', [fmtTND(Math.max(0, effort) / 12)]),
+      optimal: sim.optimal > sim.investissementAv + 0.5 ? t('Pour atteindre le plancher légal, l\'assurance vie peut aller jusqu\'à {0} par an.', [fmtTND(sim.optimal)]) : ''
+    };
+  }
+  function pointsAttention(calc) {
+    var P = calc.sim.produits;
+    var l = [];
+    if (calc.aAv) l.push(t('Assurance vie : un rachat avant {0} ans entraîne la réintégration des primes déduites dans le revenu de l\'année du rachat.', [P.av.dureeMinimaleAns]));
+    if (calc.aCea) l.push(t('CEA : chaque dépôt reste bloqué {0} ans à compter du 1er janvier suivant ; un retrait anticipé est réintégré au revenu.', [P.cea.dureeBlocageAns]));
+    l.push(t('Déduction plafonnée à {0} par an et par produit ; l\'impôt ne descend jamais sous 45 % de l\'impôt initial.', [fmtTND(P.av.plafond)]));
+    l.push(t('Les rendements sont des hypothèses : seul le taux minimum garanti du contrat est assuré ; le CEA, investi en actions, peut perdre de la valeur.'));
+    return l;
+  }
+
+  /* ===================================================================
+     Calendrier des versements (.ics)
+     =================================================================== */
+  $('agenda').addEventListener('click', function () {
+    actualiser();
+    var calc = ui.calc;
+    if (!calc || !(calc.etat.revenu > 0)) { toast(t('Saisissez d\'abord votre revenu brut annuel imposable.'), 'erreur'); return; }
+    var e = calc.etat;
+    if (!(e.versement > 0) && !(e.versementCea > 0) && !(e.initialAv > 0) && !(e.initialCea > 0)) { toast(t('Indiquez un versement en assurance vie ou en CEA pour créer le calendrier.'), 'erreur'); return; }
+    var maintenant = new Date();
+    var debut = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 1);
+    var ics = Calendrier.generer(e, { debut: debut, t: t, fmt: fmtLibre,
+      dureeMinimaleAv: calc.sim.produits.av.dureeMinimaleAns, dureeBlocageCea: calc.sim.produits.cea.dureeBlocageAns, maintenant: maintenant });
+    telecharger('calendrier-epargne-' + dateIso() + '.ics', ics, 'text/calendar;charset=utf-8');
+    toast(t('Calendrier téléchargé : ouvrez le fichier pour ajouter les rappels à votre agenda.'));
+  });
+
+  /* ===================================================================
+     Proposition commerciale (PDF de plusieurs pages, avec signatures)
+     =================================================================== */
+  $('proposition').addEventListener('click', function () {
+    actualiser();
+    if (!ui.calc || !(ui.calc.etat.revenu > 0)) { toast(t('Saisissez d\'abord votre revenu brut annuel imposable.'), 'erreur'); $('revenue').focus(); return; }
+    var r = genererPdf(true);
+    if (!r) { toast(t('Envoi impossible depuis ce navigateur : téléchargez le PDF.'), 'erreur'); return; }
+    telecharger(r.nom, r.blob, 'application/pdf');
+    toast(t('Proposition commerciale téléchargée.'));
+  });
+
+  /* ===================================================================
+     Simulation guidée en 3 étapes
+     =================================================================== */
+  var guide = { etape: 1, chef: false, retour: null };
+  brancherSegments('g-chef', function (v) { guide.chef = v === '1'; });
+  function entierGuide(id, max) { var v = parseInt($(id).value, 10); return isFinite(v) ? Math.max(0, Math.min(max, v)) : 0; }
+  function conseilGuide() {
+    var sim = Moteur.simuler({ revenu: lire('g-revenu').v, chef: guide.chef, enfants: entierGuide('g-enfants', 20), infirmes: lireEntier('disabled-children'),
+      etudiants: entierGuide('g-etudiants', 20), parents: entierGuide('g-parents', 2),
+      investissementAv: 0, investissementCea: montant('cea-period') * (FACTEURS[ui.frequence] || 12) + montant('cea-initial') }, ui.annee);
+    return { optimalMensuel: sim.optimal > 0 ? Math.ceil(sim.optimal / 12) : 0, economie: Moteur.economiePourInvestissement(sim, sim.optimal), impot: sim.impotAvant };
+  }
+  function majGuide() {
+    var n = guide.etape;
+    document.querySelectorAll('#guide .guide-etape').forEach(function (el) { el.hidden = +el.dataset.etape !== n; });
+    $('guide-etape-lib').textContent = t('Étape {0} sur 3', [n]);
+    $('guide-barre').style.width = (n / 3 * 100) + '%';
+    $('guide-retour').hidden = n === 1;
+    $('guide-suivant').firstChild.textContent = n === 3 ? t('Voir mon résultat') : t('Suivant');
+    if (n === 3) {
+      var c = conseilGuide();
+      ui.guideOptimal = c.optimalMensuel;
+      $('g-conseil').textContent = c.optimalMensuel > 0
+        ? t('Avec un revenu de {0}, verser {1} par mois en assurance vie réduit votre impôt au maximum autorisé : {2} d\'économie par an.', [fmtTND(lire('g-revenu').v), fmtTND(c.optimalMensuel), fmtTND(c.economie)])
+        : t('Votre impôt est déjà au minimum : l\'assurance vie reste utile pour constituer un capital.');
+      $('g-optimal').hidden = !(c.optimalMensuel > 0);
+    }
+    var champ = document.querySelector('#guide .guide-etape:not([hidden]) input');
+    if (champ) setTimeout(function () { champ.focus(); }, 30);
+  }
+  function ouvrirGuide() {
+    var rev = lire('revenue');
+    $('g-revenu').value = rev.v > 0 ? fmtLibre(rev.v) : '';
+    guide.chef = ui.chef;
+    selectionnerSegment('g-chef', ui.chef ? '1' : '0');
+    $('g-enfants').value = String(lireEntier('children'));
+    $('g-etudiants').value = String(lireEntier('students'));
+    $('g-parents').value = String(lireEntier('parents'));
+    var per = lire('investment-amount-period');
+    $('g-versement').value = per.v > 0 ? fmtLibre(Math.round(per.v * (FACTEURS[ui.frequence] || 12) / 12 * 1000) / 1000) : '';
+    $('g-revenu-err').textContent = '';
+    $('g-versement-err').textContent = '';
+    guide.etape = 1;
+    guide.retour = document.activeElement;
+    var d = $('guide');
+    if (typeof d.showModal === 'function') { if (!d.open) d.showModal(); } else d.setAttribute('open', '');
+    majGuide();
+  }
+  function fermerGuide() {
+    var d = $('guide');
+    if (typeof d.close === 'function' && d.open) d.close(); else d.removeAttribute('open');
+    if (guide.retour && guide.retour.focus) guide.retour.focus();
+  }
+  function terminerGuide() {
+    var v = lire('g-versement');
+    if (!v.vide && !(isFinite(v.v) && v.v >= 0)) { $('g-versement-err').textContent = t('Saisissez un montant valide (ex. 500).'); return; }
+    $('revenue').value = fmtLibre(lire('g-revenu').v);
+    $('children').value = String(entierGuide('g-enfants', 20));
+    $('students').value = String(entierGuide('g-etudiants', 20));
+    /* Le versement CEA est converti en mensuel avec la fréquence */
+    var cea = montant('cea-period');
+    if (cea > 0) $('cea-period').value = fmtLibre(Math.round(cea * (FACTEURS[ui.frequence] || 12) / 12 * 1000) / 1000);
+    $('parents').value = String(entierGuide('g-parents', 2));
+    ui.chef = guide.chef;
+    selectionnerSegment('chef', guide.chef ? '1' : '0');
+    ui.frequence = 'Mensuel';
+    selectionnerSegment('frequence', 'Mensuel');
+    $('investment-amount-period').value = v.vide ? '' : fmtLibre(v.v);
+    majCurseur();
+    majSteppers();
+    calculateAndDisplay();
+    fermerGuide();
+    $('resultats').scrollIntoView({ behavior: mouvementReduit.matches ? 'auto' : 'smooth', block: 'start' });
+    toast(t('Simulation prête : voici votre économie d\'impôt.'));
+  }
+  $('guide-suivant').addEventListener('click', function () {
+    if (guide.etape === 1) {
+      var r = lire('g-revenu');
+      if (!(isFinite(r.v) && r.v > 0)) { $('g-revenu-err').textContent = t('Saisissez un montant valide (ex. 45 000).'); $('g-revenu').focus(); return; }
+      $('g-revenu-err').textContent = '';
+    }
+    if (guide.etape === 3) { terminerGuide(); return; }
+    guide.etape++;
+    vibrer();
+    majGuide();
+  });
+  $('guide-retour').addEventListener('click', function () { if (guide.etape > 1) { guide.etape--; majGuide(); } });
+  $('guide-fermer').addEventListener('click', fermerGuide);
+  $('guide').addEventListener('cancel', function (e) { e.preventDefault(); fermerGuide(); });
+  $('guide').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') { e.preventDefault(); $('guide-suivant').click(); }
+  });
+  $('g-optimal').addEventListener('click', function () { if (ui.guideOptimal > 0) $('g-versement').value = fmtLibre(ui.guideOptimal); $('g-versement').focus(); });
+  $('g-revenu').addEventListener('blur', function () { var r = Saisie.lireNombre(this.value); if (!r.vide && isFinite(r.v) && !r.ambigu) this.value = fmtLibre(r.v); });
+  ['guide-hero', 'guide-vide'].forEach(function (id) { $(id).addEventListener('click', ouvrirGuide); });
+
+  /* ===================================================================
+     Mode présentation client : 4 diapositives plein écran
+     =================================================================== */
+  var pres = { i: 0, retour: null, x0: null };
+  function diapositives() {
+    var calc = ui.calc, sim = calc.sim, e = calc.etat, mc = ui.mc;
+    var rec = recommandation(calc);
+    var famille = (e.chef ? t('Chef de famille') : t('Non chef de famille')) + ' · ' + t('{0} enfant(s), {1} infirme(s), {2} étudiant(s), {3} parent(s)', [e.enfants, e.infirmes, e.etudiants, e.parents]);
+    var d = [];
+    d.push({ sur: t('Votre situation'), titre: t('Aujourd\'hui, vous payez {0} d\'impôt par an', [fmtTND(sim.impotAvant)]),
+      corps: '<div class="pr-chiffres"><div><span>' + echapper(t('Revenu brut annuel imposable')) + '</span><b>' + fmtTND(e.revenu) + '</b></div><div><span>' + echapper(t('Situation familiale')) + '</span><b class="petit">' + echapper(famille) + '</b></div></div>' });
+    var part = sim.impotAvant > 0 ? sim.impotApres / sim.impotAvant * 100 : 0;
+    d.push({ sur: t('Votre économie d\'impôt'), titre: fmtTND(sim.economie) + ' ' + t('par an'),
+      corps: '<p class="pr-sous">' + echapper(t('soit {0} par mois · {1} de réduction', [fmtTND(sim.economie / 12), fmtPct(sim.tauxReduction)])) + '</p>' +
+        '<div class="pr-barres"><div><span>' + echapper(t('Impôt total avant investissement')) + '</span><i style="width:100%"></i><b>' + fmtTND(sim.impotAvant) + '</b></div>' +
+        '<div><span>' + echapper(t('Impôt total après investissement')) + '</span><i class="apres" style="width:' + part.toFixed(1) + '%"></i><b>' + fmtTND(sim.impotApres) + '</b></div></div>' });
+    if (calc.actif) {
+      var fourchette = mc ? t('Dans 8 cas sur 10 : entre {0} et {1}', [fmtTND(mc.finalP10), fmtTND(mc.finalP90)])
+        : t('Entre {0} (prudent) et {1} (dynamique)', [fmtTND(calc.sc.prudent.capitalFinal), fmtTND(calc.sc.dynamique.capitalFinal)]);
+      d.push({ sur: t('Votre capital dans {0} ans', [e.dureeAns]), titre: fmtTND(mc ? mc.finalP50 : calc.sc.median.capitalFinal),
+        corps: '<p class="pr-sous">' + echapper(fourchette) + '</p><p class="pr-sous">' + echapper(t('pour {0} versés', [fmtTND(calc.med.totalVerse)])) + '</p>' +
+          '<div class="pr-graphe">' + (mc ? Graph.eventail(mc, calc.med.annees.map(function (a) { return a.verse; }), { aria: t('Éventail des capitaux possibles selon 5 000 trajectoires de marché'), x: t('Années'), objectif: t('Objectif') })
+            : Graph.courbeCapital(calc.sc, { aria: t('Capital constitué par année selon trois scénarios de rendement'), x: t('Années') })) + '</div>' });
+    }
+    var a = coordonneesAgence();
+    d.push({ sur: t('Notre recommandation'), titre: rec.lignes.join(' · ') || t('Commencez par un versement en assurance vie'),
+      corps: '<ul class="pr-liste"><li>' + echapper(rec.economie) + '</li><li>' + echapper(rec.effort) + '</li>' + (rec.optimal ? '<li>' + echapper(rec.optimal) + '</li>' : '') + '</ul>' +
+        (a.nom || a.tel || a.email ? '<p class="pr-contact">' + echapper([a.nom, a.tel, a.email].filter(Boolean).join(' · ')) + '</p>' : '') });
+    return d;
+  }
+  function afficherDiapo(sens) {
+    var liste = pres.liste, i = pres.i, s = liste[i];
+    var el = $('pr-diapo');
+    el.className = 'pr-diapo' + (sens ? (sens > 0 ? ' suiv' : ' prec') : '');
+    el.innerHTML = '<p class="pr-sur">' + echapper(s.sur) + '</p><h2 class="pr-titre">' + echapper(s.titre) + '</h2>' + s.corps;
+    $('pr-points').innerHTML = liste.map(function (x, k) { return '<button type="button" class="pr-point' + (k === i ? ' actif' : '') + '" data-i="' + k + '" aria-label="' + echapper(t('Diapositive {0} sur {1}', [k + 1, liste.length])) + '"' + (k === i ? ' aria-current="step"' : '') + '></button>'; }).join('');
+    $('pr-precedent').disabled = i === 0;
+    $('pr-suivant').disabled = i === liste.length - 1;
+    animerTrace(el.querySelector('.pr-graphe'));
+  }
+  function allerDiapo(k) {
+    if (k < 0 || k >= pres.liste.length || k === pres.i) return;
+    var sens = k > pres.i ? 1 : -1;
+    pres.i = k;
+    vibrer();
+    afficherDiapo(sens);
+  }
+  function ouvrirPresentation() {
+    actualiser();
+    if (!ui.calc || !(ui.calc.etat.revenu > 0)) { toast(t('Saisissez d\'abord votre revenu brut annuel imposable.'), 'erreur'); return; }
+    if (ui.calc.actif) calculerMonteCarlo(ui.calc);
+    var a = coordonneesAgence();
+    $('pr-agence').textContent = a.nom || t('Assurance vie & CEA');
+    pres.liste = diapositives();
+    pres.i = 0;
+    pres.retour = document.activeElement;
+    var p = $('presentation');
+    p.hidden = false;
+    document.body.classList.add('presentation-ouverte');
+    afficherDiapo(0);
+    try { if (p.requestFullscreen && !document.fullscreenElement) p.requestFullscreen().catch(function () {}); } catch (e) {}
+    $('pr-suivant').focus();
+  }
+  function fermerPresentation() {
+    var p = $('presentation');
+    if (p.hidden) return;
+    p.hidden = true;
+    document.body.classList.remove('presentation-ouverte');
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {}); } catch (e) {}
+    if (pres.retour && pres.retour.focus) pres.retour.focus();
+  }
+  $('presenter').addEventListener('click', ouvrirPresentation);
+  $('pr-fermer').addEventListener('click', fermerPresentation);
+  $('pr-precedent').addEventListener('click', function () { allerDiapo(pres.i - 1); });
+  $('pr-suivant').addEventListener('click', function () { allerDiapo(pres.i + 1); });
+  $('pr-points').addEventListener('click', function (e) { var b = e.target.closest('[data-i]'); if (b) allerDiapo(+b.dataset.i); });
+  document.addEventListener('fullscreenchange', function () { if (!document.fullscreenElement && !$('presentation').hidden && pres.pleinEcran) fermerPresentation(); pres.pleinEcran = !!document.fullscreenElement; });
+  document.addEventListener('keydown', function (e) {
+    if ($('presentation').hidden) return;
+    var rtl = document.documentElement.dir === 'rtl';
+    if (e.key === 'Escape') { e.preventDefault(); fermerPresentation(); }
+    else if (e.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || e.key === 'PageDown' || (e.key === ' ' && e.target.tagName !== 'BUTTON')) { e.preventDefault(); allerDiapo(pres.i + 1); }
+    else if (e.key === (rtl ? 'ArrowRight' : 'ArrowLeft') || e.key === 'PageUp') { e.preventDefault(); allerDiapo(pres.i - 1); }
+    else if (e.key === 'Tab') {
+      /* Focus maintenu dans la présentation */
+      var f = Array.prototype.filter.call($('presentation').querySelectorAll('button'), function (b) { return !b.disabled; });
+      if (!f.length) return;
+      var i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+    }
+  });
+  $('presentation').addEventListener('pointerdown', function (e) { pres.x0 = e.clientX; });
+  $('presentation').addEventListener('pointerup', function (e) {
+    if (pres.x0 == null) return;
+    var dx = e.clientX - pres.x0;
+    pres.x0 = null;
+    if (Math.abs(dx) < 50) return;
+    var rtl = document.documentElement.dir === 'rtl';
+    allerDiapo(pres.i + ((dx < 0) !== rtl ? 1 : -1));
+  });
+
+  /* ===================================================================
+     Couleur de l'agence : interface et PDF
+     =================================================================== */
+  function appliquerCouleur() {
+    var st = $('style-agence');
+    var pal = agence.couleur ? Theme.palette(agence.couleur) : null;
+    if (!pal) { if (st) st.parentNode.removeChild(st); majMetaTheme(); return; }
+    if (!st) { st = document.createElement('style'); st.id = 'style-agence'; document.head.appendChild(st); }
+    var rvb = pal.rvb.join(', ');
+    st.textContent = ':root{--indigo:' + pal.principale + ';--primary:' + pal.principale + ';--violet:' + pal.secondaire +
+      ';--primary-soft:rgba(' + rvb + ',0.1);--ring:rgba(' + rvb + ',0.35);--shadow-glow:0 14px 34px -12px rgba(' + rvb + ',0.55);' +
+      '--grad-main:linear-gradient(135deg,' + pal.principale + ' 0%,' + pal.secondaire + ' 50%,' + pal.tertiaire + ' 100%);' +
+      '--grad-hero:radial-gradient(110% 140% at 0% 0%,' + pal.secondaire + ' 0%,transparent 55%),radial-gradient(100% 140% at 70% 100%,' + pal.tertiaire + ' 0%,transparent 60%),linear-gradient(135deg,' + pal.principale + ',' + pal.secondaire + ');' +
+      '--aurora-1:rgba(' + rvb + ',0.2)}' +
+      ':root[data-theme="dark"]{--primary:' + pal.claire + ';--primary-soft:rgba(' + rvb + ',0.2);--ring:rgba(' + rvb + ',0.5)}';
+    majMetaTheme();
+  }
+  function couleurRapport() {
+    var pal = agence.couleur ? Theme.palette(agence.couleur) : null;
+    if (!pal) return null;
+    return { principale: pal.rvb, secondaire: Theme.versRvb(pal.secondaire), tertiaire: Theme.versRvb(pal.tertiaire) };
+  }
+  $('ag-couleur').addEventListener('input', function () { agence.couleur = this.value; appliquerCouleur(); sauverAgence(); });
+  $('ag-couleur-raz').addEventListener('click', function () {
+    agence.couleur = '';
+    $('ag-couleur').value = COULEUR_ORIGINE;
+    appliquerCouleur();
+    sauverAgence();
+    toast(t('Couleurs d\'origine rétablies.'));
+  });
+
   /* Ouverture depuis le QR code (?installer=1) : fenêtre d'installation immédiate */
   (function () {
     var params = new URLSearchParams(location.search);
@@ -1607,6 +2273,21 @@
     if (estInstallee()) return;
     setTimeout(ouvrirFenetreInstallation, 300);
   })();
+
+  /* Raccourcis de l'application installée (manifest) : ?guide=1, ?portefeuille=1, ?nouveau=1 */
+  function lancerRaccourci() {
+    var params = new URLSearchParams(location.search);
+    var cle = ['guide', 'portefeuille', 'nouveau'].filter(function (k) { return params.has(k); })[0];
+    if (!cle) return;
+    params.delete(cle);
+    try { history.replaceState(null, '', location.pathname + (params.toString() ? '?' + params : '') + location.hash); } catch (e) {}
+    if (cle === 'guide') setTimeout(ouvrirGuide, 300);
+    if (cle === 'nouveau') { appliquerEtat(Scenario.defauts()); setTimeout(function () { $('revenue').focus(); }, 300); }
+    if (cle === 'portefeuille') {
+      appliquerModeSimple(false);
+      setTimeout(function () { $('carte-portefeuille').scrollIntoView({ block: 'start' }); }, 300);
+    }
+  }
 
   /* Mode hors ligne (PWA) : seulement en HTTPS ou en local */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
@@ -1623,8 +2304,12 @@
   var langue = null;
   try { langue = localStorage.getItem('langue'); } catch (e) {}
   if (!langue) langue = (navigator.language || 'fr').slice(0, 2);
+  var simple = null;
+  try { simple = localStorage.getItem('modeSimple'); } catch (e) {}
+  appliquerModeSimple(simple === '1');
   appliquerLangue(langue, true);
   chargerDepuisLien();
+  lancerRaccourci();
 
   Port.ouvrir().then(function (d) { depot = d; return rafraichirPortefeuille(); }).catch(function () {
     $('port-vide').textContent = t('Le portefeuille n\'est pas disponible dans ce navigateur (stockage local désactivé).');
