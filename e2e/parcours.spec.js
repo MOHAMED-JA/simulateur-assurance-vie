@@ -485,3 +485,25 @@ test('raccourcis de l\'application installée : ?guide=1', async ({ page }) => {
   await expect(page.locator('#guide')).toBeVisible();
   expect(page.url()).not.toContain('guide=1');
 });
+
+test('thème : menu clair, sombre ou automatique', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.click('#theme-toggle');
+  await expect(page.locator('#panneau-theme')).toBeVisible();
+  await expect(page.locator('#choix-theme [data-val="auto"]')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.locator('#choix-theme [data-val="dark"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.click('#theme-toggle');
+  await page.locator('#choix-theme [data-val="auto"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#panneau-theme')).toBeHidden();
+  await page.click('#theme-toggle');
+  await page.mouse.click(5, 600);
+  await expect(page.locator('#panneau-theme')).toBeHidden();
+});

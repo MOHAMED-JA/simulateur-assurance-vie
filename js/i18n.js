@@ -695,6 +695,13 @@
     'Terme de l\'épargne ({0} ans)': ['End of the savings period ({0} years)', 'أجل الادخار ({0} سنوات)'],
     'Fin de la période simulée : choisir entre sortie en capital et rente.': ['End of the simulated period: choose between a lump sum and an annuity.', 'نهاية الفترة المحاكاة: الاختيار بين رأس المال والجراية.'],
 
+    'Choisir le thème': ['Choose the theme', 'اختيار المظهر'],
+    'Thème': ['Theme', 'المظهر'],
+    'Clair': ['Light', 'فاتح'],
+    'Sombre': ['Dark', 'داكن'],
+    'Auto': ['Auto', 'تلقائي'],
+    'Auto suit le réglage clair ou sombre de l\'appareil.': ['Auto follows the device\'s light or dark setting.', 'الوضع التلقائي يتبع إعداد الجهاز الفاتح أو الداكن.'],
+
     /* ---------- Barèmes ---------- */
     'Loi de finances 2025': ['2025 Finance Act', 'قانون المالية لسنة 2025'],
     'Paramètres repris de la version précédente du simulateur ; à confirmer avec le texte officiel (Code de l\'IRPP et de l\'IS).': ['Parameters carried over from the previous version of the simulator; to be confirmed against the official text (Personal Income Tax and Corporate Tax Code).', 'معايير مأخوذة من النسخة السابقة للمحاكي؛ يجب التثبت منها في النص الرسمي (مجلة الضريبة على دخل الأشخاص الطبيعيين والضريبة على الشركات).']

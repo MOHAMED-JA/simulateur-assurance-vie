@@ -96,6 +96,7 @@
     <symbol id="i-ajout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></symbol>
     <symbol id="i-menu" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="12" cy="19" r="1.4"/></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="m10 8 5 3-5 3z"/><path d="M8 21h8"/></symbol>
     <symbol id="i-agenda" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M14 14h2M8 18h2"/></symbol>
@@ -129,10 +130,21 @@
       <button type="button" class="btn btn-ghost btn-sm js-pdf" id="exporter-pdf" title="Télécharge le rapport au format PDF">
         <svg class="ico ico-sm"><use href="#i-receipt"/></svg><span class="lib-btn">PDF</span>
       </button>
-      <button class="btn btn-ghost btn-sm btn-icon theme-btn" id="theme-toggle" aria-label="Basculer le thème clair / sombre" title="Thème clair / sombre">
-        <svg class="ico ico-moon"><use href="#i-moon"/></svg>
-        <svg class="ico ico-sun"><use href="#i-sun"/></svg>
-      </button>
+      <div class="menu-theme">
+        <button type="button" class="btn btn-ghost btn-sm btn-icon theme-btn" id="theme-toggle" aria-label="Choisir le thème" title="Thème" aria-haspopup="true" aria-expanded="false" aria-controls="panneau-theme">
+          <svg class="ico ico-moon"><use href="#i-moon"/></svg>
+          <svg class="ico ico-sun"><use href="#i-sun"/></svg>
+        </button>
+        <div class="panneau-theme" id="panneau-theme" hidden>
+          <p class="pt-titre" id="pt-titre">Thème</p>
+          <div class="seg seg-theme" role="radiogroup" aria-labelledby="pt-titre" id="choix-theme">
+            <button type="button" role="radio" aria-checked="false" data-val="light"><svg class="ico ico-sm"><use href="#i-sun"/></svg>Clair</button>
+            <button type="button" role="radio" aria-checked="false" data-val="dark"><svg class="ico ico-sm"><use href="#i-moon"/></svg>Sombre</button>
+            <button type="button" role="radio" aria-checked="true" data-val="auto"><svg class="ico ico-sm"><use href="#i-auto"/></svg>Auto</button>
+          </div>
+          <p class="pt-aide">Auto suit le réglage clair ou sombre de l'appareil.</p>
+        </div>
+      </div>
     </div>
   </div>
 </header>

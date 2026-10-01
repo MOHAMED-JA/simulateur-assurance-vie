@@ -50,7 +50,7 @@ Avec les deux produits, l'impôt ne descend jamais sous 45 % et la part de rédu
 - Barème paramétrable par année : un sélecteur d'année apparaît dès qu'il y a plusieurs barèmes (la loi de finances 2026 n'a pas modifié le barème : un seul est affiché).
 - **QR code d'installation** : `assets/qr-installation.png` et l'affiche à imprimer `assets/affiche-installation.pdf` (aussi générée depuis la fenêtre « Installer l'application » sur ordinateur, avec les coordonnées de l'agence). Le code ouvre `…/?installer=1` : l'application s'affiche directement sur une fenêtre d'installation adaptée au téléphone (un appui sur Android, deux gestes guidés sur iPhone et iPad ; dans les navigateurs intégrés à Facebook ou Instagram, invitation à ouvrir la page dans Chrome ou Safari). Aucun site ne peut s'installer sans l'accord de l'utilisateur : c'est une règle des téléphones. L'adresse du QR code se règle dans `js/config.js` (`urlPublique`).
 - **Application installable et hors ligne** (PWA) : utilisable en agence sans réseau ; en ligne, la dernière version publiée est toujours servie. Raccourcis sur l'icône (appui long) : nouvelle simulation, simulation guidée, portefeuille ; vibration légère au toucher.
-- Thème clair / sombre, adapté au mobile (dès 320 px de large).
+- Thème clair, sombre ou automatique (suit le réglage de l'appareil), au choix dans un menu ; adapté au mobile (dès 320 px de large).
 
 ## Organisation
 

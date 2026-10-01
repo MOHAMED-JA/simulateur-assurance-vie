@@ -1469,14 +1469,33 @@
     depot.vider().then(function () { ui.selection = []; $('port-comparaison').hidden = true; return rafraichirPortefeuille(); }).then(function () { toast(t('Portefeuille vidé.')); });
   });
 
-  /* Thème (clé « theme » conservée : « light » ou « dark ») */
-  $('theme-toggle').addEventListener('click', function () {
-    var html = document.documentElement;
-    var suivant = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', suivant);
-    try { localStorage.setItem('theme', suivant); } catch (e) {}
+  /* Thème : clair, sombre ou automatique (clé « theme » : « light », « dark » ou « auto » ; absente = auto) */
+  var sombreSysteme = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : { matches: true };
+  function choixTheme() {
+    var c = null;
+    try { c = localStorage.getItem('theme'); } catch (e) {}
+    return c === 'light' || c === 'dark' ? c : 'auto';
+  }
+  function appliquerTheme(choix, memoriser) {
+    if (memoriser) { try { localStorage.setItem('theme', choix); } catch (e) {} }
+    var effectif = choix === 'auto' ? (sombreSysteme.matches ? 'dark' : 'light') : choix;
+    document.documentElement.setAttribute('data-theme', effectif);
+    selectionnerSegment('choix-theme', choix);
     majMetaTheme();
-  });
+  }
+  function ouvrirMenuTheme(ouvrir) {
+    var p = $('panneau-theme');
+    p.hidden = !ouvrir;
+    $('theme-toggle').setAttribute('aria-expanded', String(ouvrir));
+    if (ouvrir) { var b = p.querySelector('[aria-checked="true"]'); if (b) b.focus(); }
+  }
+  brancherSegments('choix-theme', function (v) { appliquerTheme(v, true); });
+  $('theme-toggle').addEventListener('click', function () { ouvrirMenuTheme($('panneau-theme').hidden); });
+  document.addEventListener('click', function (e) { if (!$('panneau-theme').hidden && !e.target.closest('.menu-theme')) ouvrirMenuTheme(false); });
+  $('panneau-theme').addEventListener('keydown', function (e) { if (e.key === 'Escape') { ouvrirMenuTheme(false); $('theme-toggle').focus(); } });
+  var surChangementSysteme = function () { if (choixTheme() === 'auto') appliquerTheme('auto'); };
+  if (sombreSysteme.addEventListener) sombreSysteme.addEventListener('change', surChangementSysteme);
+  else if (sombreSysteme.addListener) sombreSysteme.addListener(surChangementSysteme);
   function majMetaTheme() {
     var m = document.querySelector('meta[name="theme-color"]');
     var pal = agence.couleur ? Theme.palette(agence.couleur) : null;
@@ -2298,7 +2317,7 @@
   $('annee').textContent = new Date().getFullYear();
   initialiserAnnees();
   chargerAgence();
-  majMetaTheme();
+  appliquerTheme(choixTheme());
   majCurseur();
   majSteppers();
   var langue = null;
