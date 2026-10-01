@@ -345,6 +345,7 @@
     if (etaitCache) ['graph-economie', 'graph-capital'].forEach(function (id) { animerTrace($(id)); });
     if (!$('panneau-partage').hidden) majPartage();
 
+    planifierNav();
     $('resume-vocal').textContent = t('Économie d\'impôt de {0} par an, soit {1} de réduction. Montant optimal en assurance vie : {2}.', [fmtTND(sim.economie), fmtPct(sim.tauxReduction), fmtTND(sim.optimal)]);
   }
 
@@ -1114,6 +1115,7 @@
 
   function afficherPortefeuille() {
     var liste = ui.portefeuille;
+    planifierNav();
     ui.selection = ui.selection.filter(function (id) { return liste.some(function (e) { return e.id === id; }); });
     $('port-vide').hidden = liste.length > 0;
     $('port-export').disabled = !liste.length;
@@ -1231,6 +1233,7 @@
     calculateAndDisplay();
     afficherPortefeuille();
     if ($('fenetre-installation').open) remplirFenetre();
+    construireNav();
     if ($('guide').open) majGuide();
     if (!$('presentation').hidden) { pres.liste = diapositives(); afficherDiapo(0); }
     if (ui.mc) afficherMonteCarlo();
@@ -2293,6 +2296,306 @@
     setTimeout(ouvrirFenetreInstallation, 300);
   })();
 
+  /* ===================================================================
+     Rubriques : barre latérale (bureau) ou feuille de navigation (mobile)
+     Suivi de la rubrique visible, valeurs clés en direct, filtre « / »
+     =================================================================== */
+  var RUBRIQUES = [
+    ['Votre situation', [
+      ['conseiller', '#carte-conseiller', 'Mode conseiller', 'i-user'],
+      ['famille', 'section[aria-labelledby="t-famille"]', 'Situation familiale', 'i-users'],
+      ['investissement', 'section[aria-labelledby="t-inv"]', 'Investissement', 'i-coins']
+    ]],
+    ['Résultats', [
+      ['economie', '#resultats .kpis', 'Économie d\'impôt', 'i-piggy'],
+      ['impot', 'section[aria-labelledby="t-impot"]', 'Impôt annuel', 'i-receipt'],
+      ['net', 'section[aria-labelledby="t-net"]', 'Revenu net imposable', 'i-cash'],
+      ['tranches', 'section[aria-labelledby="t-tranches"]', 'Impôt par tranche', 'i-layers'],
+      ['courbe', 'section[aria-labelledby="t-courbe"]', 'Économie selon le montant investi', 'i-chart']
+    ]],
+    ['Projection', [
+      ['projection', 'section[aria-labelledby="t-proj"]', 'Projection du capital', 'i-target'],
+      ['mc', '#carte-mc', 'Projection probabiliste', 'i-des'],
+      ['strategie', '#carte-strategie', 'Stratégie optimale', 'i-boussole'],
+      ['contrats', '#carte-contrats', 'Comparateur de contrats', 'i-balance']
+    ]],
+    ['Sortie et prévoyance', [
+      ['rachat', '#carte-rachat', 'Rachat anticipé', 'i-logout'],
+      ['prevoyance', '#carte-prevoyance', 'Prévoyance', 'i-umbrella']
+    ]],
+    ['Conseiller', [
+      ['portefeuille', '#carte-portefeuille', 'Portefeuille', 'i-columns'],
+      ['faq', 'section[aria-labelledby="t-faq"]', 'Questions fréquentes', 'i-help']
+    ]]
+  ];
+  var nav = { items: [], actif: null, verrou: 0, rafSpy: 0, rafMaj: 0 };
+  var navLarge = window.matchMedia ? matchMedia('(min-width: 1280px)') : { matches: true };
+
+  function construireNav() {
+    var liste = $('rb-liste');
+    var html = '<span class="rb-curseur" id="rb-curseur" aria-hidden="true"></span>';
+    nav.items = [];
+    RUBRIQUES.forEach(function (g) {
+      html += '<p class="rb-groupe" data-groupe>' + echapper(t(g[0])) + '</p>';
+      g[1].forEach(function (r) {
+        var el = document.querySelector(r[1]);
+        if (!el) return;
+        el.id = el.id || 'rubrique-' + r[0];
+        el.setAttribute('data-rubrique', r[0]);
+        nav.items.push({ cle: r[0], el: el, lib: t(r[2]) });
+        html += '<button type="button" class="rb-item" data-cle="' + r[0] + '" title="' + echapper(t(r[2])) + '"><span class="rb-ico" aria-hidden="true"><svg class="ico"><use href="#' + r[3] + '"/></svg></span>' +
+          '<span class="rb-txt"><span class="rb-lib">' + echapper(t(r[2])) + '</span><span class="rb-val" data-val="' + r[0] + '"></span></span></button>';
+      });
+    });
+    liste.innerHTML = html;
+    nav.items.forEach(function (it) { it.btn = liste.querySelector('[data-cle="' + it.cle + '"]'); });
+    filtrerNav();
+    majNav();
+  }
+
+  /* État de chaque rubrique : visible, en attente du revenu (grisée) ou absente (masquée) */
+  function etatRubrique(it) {
+    var el = it.el;
+    if (el.closest('.expert') && document.body.classList.contains('mode-simple')) return 'absente';
+    var res = $('resultats');
+    if (res.contains(el) && res.hidden) return 'attente';
+    if (el.hidden || el.closest('[hidden]')) return 'absente';
+    return 'visible';
+  }
+
+  function valeurRubrique(cle) {
+    var c = ui.calc;
+    if (!c || !(c.etat.revenu > 0)) return cle === 'portefeuille' && ui.portefeuille.length ? t('{0} simulation(s)', [ui.portefeuille.length]) : '';
+    switch (cle) {
+      case 'economie': return t('{0} par an', [fmtEntier(c.sim.economie) + ' TND']);
+      case 'impot': return fmtEntier(c.sim.impotAvant) + ' → ' + fmtEntier(c.sim.impotApres) + ' TND';
+      case 'projection': return c.actif ? t('{0} au terme', [fmtEntier(c.sc.median.capitalFinal) + ' TND']) : '';
+      case 'mc': return ui.mc ? t('9 fois sur 10 : {0} ou plus', [fmtEntier(ui.mc.finalP10) + ' TND']) : '';
+      case 'strategie': return ui.strategie && ui.strategie.gain > 1 ? t('{0} de plus possible', ['+' + fmtEntier(ui.strategie.gain) + ' TND']) : '';
+      case 'contrats':
+        var m = ui.contrats && ui.contrats.filter(function (r) { return r.meilleur; })[0];
+        return m ? '★ ' + m.nom : '';
+      case 'portefeuille': return ui.portefeuille.length ? t('{0} simulation(s)', [ui.portefeuille.length]) : '';
+      default: return '';
+    }
+  }
+
+  function planifierNav() {
+    if (nav.rafMaj) return;
+    nav.rafMaj = requestAnimationFrame(function () { nav.rafMaj = 0; majNav(); });
+  }
+  function majNav() {
+    nav.items.forEach(function (it) {
+      var e = etatRubrique(it);
+      it.etat = e;
+      it.btn.hidden = e === 'absente' || it.filtre === false;
+      if (e === 'attente') {
+        it.btn.setAttribute('aria-disabled', 'true');
+        it.btn.title = t('Disponible après la saisie de votre revenu.');
+      } else {
+        it.btn.removeAttribute('aria-disabled');
+        it.btn.title = it.lib;
+      }
+      var v = it.btn.querySelector('.rb-val');
+      var val = e === 'visible' ? valeurRubrique(it.cle) : '';
+      if (v.textContent !== val) {
+        /* Montants isolés de gauche à droite (lecture correcte en arabe) */
+        v.innerHTML = echapper(val).replace(/\+?\d[\d\s,.]*(?:\s?→\s?\d[\d\s,.]*)?(?:\s?TND)?/g, function (m) { return '<bdi dir="ltr">' + m.trim() + '</bdi> '; }).trim();
+      }
+    });
+    /* Titres de groupe sans rubrique affichée : masqués */
+    Array.prototype.forEach.call($('rb-liste').querySelectorAll('[data-groupe]'), function (g) {
+      var n = g.nextElementSibling, vide = true;
+      while (n && !n.hasAttribute('data-groupe')) { if (!n.hidden) vide = false; n = n.nextElementSibling; }
+      g.hidden = vide;
+    });
+    $('rb-aucune').hidden = nav.items.some(function (it) { return !it.btn.hidden; });
+    suivreRubrique();
+  }
+
+  /* Rubrique courante : la dernière dont le haut a franchi le tiers supérieur de l'écran */
+  function hauteurBarre() { return $('rubriques').ownerDocument.querySelector('.topbar').offsetHeight; }
+  function suivreRubrique() {
+    if (Date.now() < nav.verrou) return;
+    var haut = hauteurBarre();
+    var ligne = haut + (window.innerHeight - haut) * 0.3;
+    var visibles = nav.items.filter(function (it) { return it.etat === 'visible'; });
+    if (!visibles.length) { activerRubrique(null); return; }
+    var choix = null, meilleur = -Infinity;
+    var finPage = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    visibles.forEach(function (it) {
+      var r = it.el.getBoundingClientRect();
+      if (finPage) { if (r.top < window.innerHeight && r.top > meilleur) { meilleur = r.top; choix = it; } return; }
+      if (r.top <= ligne && r.bottom > haut + 24 && r.top > meilleur) { meilleur = r.top; choix = it; }
+    });
+    if (!choix && window.scrollY < 40) choix = null;
+    activerRubrique(choix);
+  }
+  function activerRubrique(it) {
+    if (nav.actif === it) { placerCurseur(); return; }
+    if (nav.actif) nav.actif.btn.removeAttribute('aria-current');
+    nav.actif = it;
+    if (it) it.btn.setAttribute('aria-current', 'true');
+    $('rb-p-cour').textContent = it ? it.lib : '';
+    placerCurseur();
+  }
+  function placerCurseur() {
+    var c = $('rb-curseur');
+    if (!c) return;
+    var it = nav.actif;
+    if (!it || it.btn.hidden) { c.classList.remove('visible'); return; }
+    c.style.transform = 'translateY(' + it.btn.offsetTop + 'px)';
+    c.style.height = it.btn.offsetHeight + 'px';
+    c.classList.add('visible');
+    /* Garde la rubrique active visible dans la liste */
+    var l = $('rb-liste'), b = it.btn;
+    if (b.offsetTop < l.scrollTop || b.offsetTop + b.offsetHeight > l.scrollTop + l.clientHeight) {
+      l.scrollTo({ top: b.offsetTop - l.clientHeight / 2, behavior: mouvementReduit.matches ? 'auto' : 'smooth' });
+    }
+  }
+
+  function allerRubrique(it) {
+    if (it.etat === 'attente') {
+      fermerFeuille();
+      $('revenue').focus();
+      $('revenue').scrollIntoView({ behavior: mouvementReduit.matches ? 'auto' : 'smooth', block: 'center' });
+      toast(t('Saisissez d\'abord votre revenu brut annuel imposable.'), 'erreur');
+      return;
+    }
+    if (it.el.tagName === 'DETAILS') it.el.open = true;
+    fermerFeuille();
+    nav.verrou = Date.now() + 1000;
+    if (nav.actif) nav.actif.btn.removeAttribute('aria-current');
+    nav.actif = null;
+    activerRubrique(it);
+    it.el.scrollIntoView({ behavior: mouvementReduit.matches ? 'auto' : 'smooth', block: 'start' });
+    var titre = it.el.querySelector('h2, h3');
+    if (titre) { titre.setAttribute('tabindex', '-1'); titre.focus({ preventScroll: true }); }
+    it.el.classList.remove('rb-arrivee');
+    void it.el.offsetWidth;
+    it.el.classList.add('rb-arrivee');
+    setTimeout(function () { it.el.classList.remove('rb-arrivee'); }, 1000);
+    vibrer();
+  }
+
+  /* Filtre : insensible aux accents et à la casse */
+  function sansAccents(s) { return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function filtrerNav() {
+    var q = sansAccents($('rb-filtre').value.trim());
+    nav.items.forEach(function (it) { it.filtre = !q || sansAccents(it.lib).indexOf(q) !== -1; });
+  }
+  $('rb-filtre').addEventListener('input', function () { filtrerNav(); majNav(); });
+  $('rb-filtre').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var it = nav.items.filter(function (x) { return !x.btn.hidden && x.etat === 'visible'; })[0];
+      if (it) { this.value = ''; filtrerNav(); majNav(); allerRubrique(it); }
+    } else if (e.key === 'Escape' && this.value) { e.stopPropagation(); this.value = ''; filtrerNav(); majNav(); }
+    else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      var b = $('rb-liste').querySelector('.rb-item:not([hidden])');
+      if (b) b.focus();
+    }
+  });
+  $('rb-liste').addEventListener('click', function (e) {
+    var b = e.target.closest('.rb-item');
+    if (!b) return;
+    var it = nav.items.filter(function (x) { return x.btn === b; })[0];
+    if (it) allerRubrique(it);
+  });
+  /* Flèches haut et bas entre les rubriques */
+  $('rb-liste').addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    var bs = Array.prototype.filter.call(this.querySelectorAll('.rb-item'), function (b) { return !b.hidden; });
+    var i = bs.indexOf(document.activeElement);
+    if (i === -1) return;
+    e.preventDefault();
+    var n = bs[i + (e.key === 'ArrowDown' ? 1 : -1)];
+    if (n) n.focus(); else if (e.key === 'ArrowUp') $('rb-filtre').focus();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest('input, textarea, select, [contenteditable="true"]') || !$('presentation').hidden || document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    if (!navLarge.matches) ouvrirFeuille();
+    if (document.documentElement.classList.contains('nav-reduite') && navLarge.matches) reduireNav(false);
+    $('rb-filtre').focus();
+  });
+
+  /* Barre réduite à ses icônes (mémorisé) */
+  function reduireNav(reduite) {
+    document.documentElement.classList.toggle('nav-reduite', reduite);
+    $('rb-reduire').setAttribute('aria-pressed', String(reduite));
+    var lib = reduite ? t('Déplier le menu') : t('Réduire le menu');
+    $('rb-reduire').title = lib;
+    $('rb-reduire').setAttribute('aria-label', lib);
+    try { localStorage.setItem('navReduite', reduite ? '1' : '0'); } catch (e) {}
+    setTimeout(placerCurseur, 280);
+  }
+  $('rb-reduire').addEventListener('click', function () { reduireNav(!document.documentElement.classList.contains('nav-reduite')); });
+  $('rb-haut').addEventListener('click', function () {
+    fermerFeuille();
+    window.scrollTo({ top: 0, behavior: mouvementReduit.matches ? 'auto' : 'smooth' });
+  });
+
+  /* Feuille de navigation sur téléphone et tablette */
+  var retourFeuille = null;
+  function ouvrirFeuille() {
+    if (navLarge.matches) return;
+    var n = $('rubriques'), v = $('rb-voile');
+    retourFeuille = document.activeElement;
+    v.hidden = false;
+    requestAnimationFrame(function () { v.classList.add('visible'); n.classList.add('ouvert'); placerCurseur(); });
+    document.body.classList.add('feuille-ouverte');
+    $('rb-pilule').setAttribute('aria-expanded', 'true');
+    $('rb-pilule').classList.add('cachee');
+    setTimeout(function () { var b = nav.actif && !nav.actif.btn.hidden ? nav.actif.btn : $('rb-liste').querySelector('.rb-item:not([hidden])'); if (b && n.classList.contains('ouvert')) b.focus({ preventScroll: true }); }, 60);
+  }
+  function fermerFeuille() {
+    var n = $('rubriques');
+    if (!n.classList.contains('ouvert')) return;
+    n.classList.remove('ouvert');
+    $('rb-voile').classList.remove('visible');
+    setTimeout(function () { if (!n.classList.contains('ouvert')) $('rb-voile').hidden = true; }, 280);
+    document.body.classList.remove('feuille-ouverte');
+    $('rb-pilule').setAttribute('aria-expanded', 'false');
+    $('rb-pilule').classList.remove('cachee');
+    if (retourFeuille && retourFeuille.focus && retourFeuille !== document.body) retourFeuille.focus({ preventScroll: true });
+  }
+  $('rb-pilule').addEventListener('click', ouvrirFeuille);
+  $('rb-fermer').addEventListener('click', fermerFeuille);
+  $('rb-voile').addEventListener('click', fermerFeuille);
+  $('rubriques').addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && $('rubriques').classList.contains('ouvert')) { e.preventDefault(); fermerFeuille(); }
+    if (e.key === 'Tab' && $('rubriques').classList.contains('ouvert')) {
+      var f = Array.prototype.filter.call(this.querySelectorAll('button, input'), function (b) { return !b.hidden && b.offsetParent !== null; });
+      var i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+    }
+  });
+  function surChangementLargeur() { if (navLarge.matches) fermerFeuille(); placerCurseur(); }
+  if (navLarge.addEventListener) navLarge.addEventListener('change', surChangementLargeur);
+  else if (navLarge.addListener) navLarge.addListener(surChangementLargeur);
+
+  /* Hauteur de la barre supérieure (position de la barre latérale et ancrage des rubriques) */
+  function majHauteurBarre() { document.documentElement.style.setProperty('--topbar-h', hauteurBarre() + 'px'); }
+  if (window.ResizeObserver) new ResizeObserver(majHauteurBarre).observe(document.querySelector('.topbar'));
+  window.addEventListener('resize', function () { majHauteurBarre(); placerCurseur(); });
+  window.addEventListener('scroll', function () {
+    if (nav.rafSpy) return;
+    nav.rafSpy = requestAnimationFrame(function () { nav.rafSpy = 0; suivreRubrique(); });
+  }, { passive: true });
+
+  /* Rubriques affichées ou masquées (résultats, mode simple, cartes conditionnelles) */
+  if (window.MutationObserver) {
+    var obs = new MutationObserver(planifierNav);
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    ['resultats', 'carte-conseiller', 'carte-mc', 'carte-strategie', 'carte-contrats', 'carte-rachat', 'carte-prevoyance', 'mc-phrases', 'strat-resume', 'contrats-res', 'port-liste'].forEach(function (id) {
+      if ($(id)) obs.observe($(id), { attributes: true, attributeFilter: ['hidden'], childList: true });
+    });
+  }
+
   /* Raccourcis de l'application installée (manifest) : ?guide=1, ?portefeuille=1, ?nouveau=1 */
   function lancerRaccourci() {
     var params = new URLSearchParams(location.search);
@@ -2323,6 +2626,8 @@
   var langue = null;
   try { langue = localStorage.getItem('langue'); } catch (e) {}
   if (!langue) langue = (navigator.language || 'fr').slice(0, 2);
+  try { if (localStorage.getItem('navReduite') === '1') reduireNav(true); } catch (e) {}
+  majHauteurBarre();
   var simple = null;
   try { simple = localStorage.getItem('modeSimple'); } catch (e) {}
   appliquerModeSimple(simple === '1');

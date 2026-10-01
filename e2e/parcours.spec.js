@@ -507,3 +507,46 @@ test('thème : menu clair, sombre ou automatique', async ({ page }) => {
   await page.mouse.click(5, 600);
   await expect(page.locator('#panneau-theme')).toBeHidden();
 });
+
+test('rubriques : navigation, suivi, filtre et feuille mobile', async ({ page, isMobile }) => {
+  await expect(page.locator('.rb-item[data-cle="economie"]')).toHaveAttribute('aria-disabled', 'true');
+  if (isMobile) {
+    await expect(page.locator('#rb-pilule')).toBeVisible();
+    await page.click('#rb-pilule');
+    await expect(page.locator('#rubriques')).toHaveClass(/ouvert/);
+    await page.click('.rb-item[data-cle="economie"]', { force: true });
+    await expect(page.locator('#revenue')).toBeFocused();
+  } else {
+    await page.click('.rb-item[data-cle="economie"]', { force: true });
+    await expect(page.locator('#revenue')).toBeFocused();
+  }
+  await page.fill('#revenue', '60000');
+  await page.fill('#investment-amount-period', '400');
+  await expect(page.locator('.rb-item[data-cle="economie"]')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(page.locator('.rb-val[data-val="economie"]')).toContainText('par an');
+  if (isMobile) await page.click('#rb-pilule');
+  await page.click('.rb-item[data-cle="mc"]');
+  await expect(page.locator('#carte-mc')).toBeInViewport();
+  await expect(page.locator('.rb-item[data-cle="mc"]')).toHaveAttribute('aria-current', 'true');
+  if (isMobile) {
+    await expect(page.locator('#rubriques')).not.toHaveClass(/ouvert/);
+    await expect(page.locator('#rb-p-cour')).toHaveText('Projection probabiliste');
+    return;
+  }
+  await page.locator('.hero h1').click();
+  await page.keyboard.press('/');
+  await expect(page.locator('#rb-filtre')).toBeFocused();
+  await page.keyboard.type('prevoy');
+  await expect(page.locator('.rb-item:not([hidden])')).toHaveCount(1);
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#carte-prevoyance')).toBeInViewport();
+  await page.click('#mode-simple');
+  await expect(page.locator('.rb-item[data-cle="strategie"]')).toBeHidden();
+  await page.click('#mode-simple');
+  await page.click('#rb-reduire');
+  await expect(page.locator('html')).toHaveClass(/nav-reduite/);
+  await page.reload();
+  await expect(page.locator('html')).toHaveClass(/nav-reduite/);
+  await page.click('#rb-reduire');
+  await expect(page.locator('html')).not.toHaveClass(/nav-reduite/);
+});

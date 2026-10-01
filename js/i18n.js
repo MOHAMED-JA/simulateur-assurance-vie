@@ -702,6 +702,29 @@
     'Auto': ['Auto', 'تلقائي'],
     'Auto suit le réglage clair ou sombre de l\'appareil.': ['Auto follows the device\'s light or dark setting.', 'الوضع التلقائي يتبع إعداد الجهاز الفاتح أو الداكن.'],
 
+    /* ---------- Barre latérale des rubriques ---------- */
+    'Rubriques': ['Sections', 'الأقسام'],
+    'Aller à une rubrique': ['Go to a section', 'الانتقال إلى قسم'],
+    'Aller à une rubrique…': ['Go to a section…', 'الانتقال إلى قسم…'],
+    'Aucune rubrique ne correspond.': ['No matching section.', 'لا يوجد قسم مطابق.'],
+    'Haut de page': ['Back to top', 'أعلى الصفحة'],
+    'Fermer les rubriques': ['Close sections', 'إغلاق الأقسام'],
+    'Réduire le menu': ['Collapse menu', 'طيّ القائمة'],
+    'Déplier le menu': ['Expand menu', 'توسيع القائمة'],
+    'Résultats': ['Results', 'النتائج'],
+    'Projection': ['Projection', 'الإسقاط'],
+    'Sortie et prévoyance': ['Exit and protection', 'الخروج والحيطة'],
+    'Conseiller': ['Adviser', 'المستشار'],
+    'Stratégie optimale': ['Optimal strategy', 'الاستراتيجية المثلى'],
+    'Rachat anticipé': ['Early surrender', 'الاسترداد المسبق'],
+    'Portefeuille': ['Portfolio', 'المحفظة'],
+    '{0} simulation(s)': ['{0} simulation(s)', '{0} محاكاة'],
+    '{0} par an': ['{0} per year', '{0} سنويًا'],
+    '{0} au terme': ['{0} at maturity', '{0} عند الأجل'],
+    '9 fois sur 10 : {0} ou plus': ['9 times out of 10: {0} or more', '9 مرات من 10: {0} أو أكثر'],
+    '{0} de plus possible': ['{0} more possible', '{0} إضافية ممكنة'],
+    'Disponible après la saisie de votre revenu.': ['Available once you enter your income.', 'متاح بعد إدخال دخلك.'],
+
     /* ---------- Barèmes ---------- */
     'Loi de finances 2025': ['2025 Finance Act', 'قانون المالية لسنة 2025'],
     'Paramètres repris de la version précédente du simulateur ; à confirmer avec le texte officiel (Code de l\'IRPP et de l\'IS).': ['Parameters carried over from the previous version of the simulator; to be confirmed against the official text (Personal Income Tax and Corporate Tax Code).', 'معايير مأخوذة من النسخة السابقة للمحاكي؛ يجب التثبت منها في النص الرسمي (مجلة الضريبة على دخل الأشخاص الطبيعيين والضريبة على الشركات).']

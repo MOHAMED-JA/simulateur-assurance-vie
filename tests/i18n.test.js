@@ -16,6 +16,9 @@ function clesJs(fichier) {
   const cles = [...src.matchAll(/\bt\('((?:[^'\\]|\\.)*)'/g)].map((m) => m[1].replace(/\\'/g, "'"));
   /* Libellés traduits indirectement : périodes, scénarios, colonnes du comparateur, origine du capital décès */
   for (const m of src.matchAll(/\['((?:[^'\\]|\\.)*)', '\w+', '(?:tnd|ent|pct)'/g)) cles.push(m[1].replace(/\\'/g, "'"));
+  /* Rubriques de la barre latérale : ['clé', 'sélecteur', 'Libellé', 'i-icone'] et titres de groupe */
+  for (const m of src.matchAll(/\['\w+', '[^']*', '((?:[^'\\]|\\.)*)', 'i-[\w-]+'\]/g)) cles.push(m[1].replace(/\\'/g, "'"));
+  for (const m of src.matchAll(/^    \['((?:[^'\\]|\\.)*)', \[$/gm)) cles.push(m[1].replace(/\\'/g, "'"));
   for (const m of src.matchAll(/(?:Mensuel|Trimestriel|Semestriel|Annuel|prudent|median|dynamique|acquis|verses|garanti): '([^']+)'/g)) cles.push(m[1]);
   return cles;
 }
