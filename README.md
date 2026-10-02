@@ -33,6 +33,18 @@ Avec les deux produits, l'impôt ne descend jamais sous 45 % et la part de rédu
 - **Rapport PDF** (jsPDF) : en-tête et logo, numéro de dossier, indicateurs, tableaux, graphiques, rachat, prévoyance, QR code, mentions légales, pages numérotées. En arabe, le rapport est rédigé en français (les polices standard du PDF n'ont pas de glyphes arabes). Si jsPDF ne se charge pas, la boîte d'impression du navigateur prend le relais.
 - **Mode conseiller et portefeuille** : nom du client, du conseiller et référence du dossier sur le rapport ; simulations enregistrées dans le navigateur (IndexedDB, 200 au plus), rouvertes en un clic, **comparées côte à côte** (2 ou 3, meilleure valeur signalée par ★) et exportées en Excel (CSV) ; **tableau de bord** (épargne proposée, économies d'impôt, capital projeté) et **sauvegarde / restauration** du portefeuille dans un fichier, pour changer d'appareil ou de navigateur.
 - **PDF aux couleurs de l'agence** : logo, nom et coordonnées de l'agence, nom du conseiller pré-rempli ; mémorisés sur l'appareil uniquement.
+- **Palette de commandes (Ctrl K)** : toutes les actions, rubriques et réglages au clavier, avec saisie directe (« 60000 », « av 500 », « cea 200 », « 20 ans », « 2 enfants »).
+- **Annuler / rétablir** (Ctrl Z, Ctrl Maj Z) : historique des 60 dernières saisies, avec l'effet sur l'économie d'impôt.
+- **Comparer des scénarios** : jusqu'à 4 variantes du même client côte à côte (montant optimal, tout en assurance vie, moitié en CEA, 100 TND de plus par mois…), meilleure valeur de chaque critère signalée par ★, application en un clic.
+- **Simulation du couple** : répartition du budget d'assurance vie du foyer entre les deux conjoints qui maximise l'économie d'impôt (déductions familiales au chef de famille).
+- **Tests de résistance** : krach l'année N (CEA en chute, assurance vie au seul taux garanti), pause des versements, rendements plus bas, inflation élevée ; effet sur le capital au terme.
+- **Objectifs de vie** : retraite, études, logement… versement mensuel nécessaire pour chacun au rendement net, financement par ordre d'échéance et ajustement du versement en un clic.
+- **Reçu fiscal à partager** : image PNG (1080 × 1350) prête pour WhatsApp, LinkedIn ou Instagram, avec QR code vers l'application (aucune donnée personnelle).
+- **Classeur Excel (.xlsx)** : synthèse, impôt par tranche, projection, Monte-Carlo, stratégie, scénarios et objectifs, avec formules ; généré sans bibliothèque (`js/xlsx.js`).
+- **Import d'un relevé PDF** : taux servi, taux garanti, frais et versement repérés dans un relevé ou un contrat (PDF texte), proposés puis appliqués seulement si l'utilisateur coche ; le fichier reste sur l'appareil.
+- **Rappels de versement** : notification le jour choisi (à l'ouverture de l'application, et en arrière-plan sur l'application installée quand le navigateur le permet).
+- **Présentation sur un second écran** et **verrouillage de la saisie** : la fenêtre tournée vers le client affiche les diapositives, celle du conseiller sert de télécommande.
+- **Finitions** : lien « Aller au contenu », annulation des suppressions, courbes qui se transforment au lieu d'être redessinées, changement de thème en cercle, retour visuel quand le plancher légal est atteint, cibles tactiles agrandies sur tablette.
 - **Barre latérale des rubriques** : toutes les rubriques classées (votre situation, résultats, projection, sortie et prévoyance, conseiller), rubrique courante suivie au défilement, chiffres clés en direct (économie, capital au terme, stratégie…), recherche avec la touche « / », barre réductible à ses icônes. Sur téléphone et tablette : bouton flottant « Rubriques » qui ouvre une feuille de navigation.
 - **Aspect moderne** : fond « aurora » animé (immobile sur téléphone et si les animations sont réduites), cartes en verre dépoli, courbes qui se dessinent à l'affichage.
 - **Mode simple / expert** : le mode simple masque les réglages avancés (tranches, hypothèses détaillées, stratégie, contrats, rachat, portefeuille) ; le choix est mémorisé.
@@ -79,6 +91,15 @@ js/strategie.js         répartition optimale assurance vie / CEA année par ann
 js/contrats.js          comparateur de contrats (fonctions pures)
 js/calendrier.js        calendrier .ics (fonctions pures)
 js/theme.js             palette de la couleur de l'agence (fonctions pures)
+js/stress.js            tests de résistance (fonctions pures)
+js/couple.js            répartition entre conjoints (fonctions pures)
+js/objectifs.js         objectifs de vie (fonctions pures)
+js/comparateur.js       comparaison de scénarios (fonctions pures)
+js/historique.js        annuler / rétablir (fonctions pures)
+js/xlsx.js              classeur Excel sans bibliothèque (fonctions pures)
+js/releve.js            lecture d'un relevé PDF (fonctions pures)
+js/commandes.js         palette de commandes (fonctions pures)
+js/rappels.js           échéances des rappels (fonctions pures, partagées avec sw.js)
 js/graphiques.js        graphiques SVG
 js/i18n.js              traductions (anglais, arabe)
 js/pdf.js               rapport PDF

@@ -139,6 +139,11 @@ test.describe('petit téléphone (320 px)', () => {
     await page.click('#libre-ajouter');
     await page.fill('#ob-servi', '7');
     await expect(page.locator('#mc-phrases .mc-phrase')).toHaveCount(4);
+    await page.click('#scn-ajouter');
+    await page.click('[data-variante="optimal"]');
+    await page.click('[data-modele="retraite"]');
+    await page.fill('#cp-revenu', '25000');
+    await page.click('#verrou');
     for (const l of ['fr', 'en', 'ar']) {
       await page.selectOption('#langue', l);
       const [large, visible] = await page.evaluate(() => [window.innerWidth, document.documentElement.clientWidth]);
@@ -549,4 +554,144 @@ test('rubriques : navigation, suivi, filtre et feuille mobile', async ({ page, i
   await expect(page.locator('html')).toHaveClass(/nav-reduite/);
   await page.click('#rb-reduire');
   await expect(page.locator('html')).not.toHaveClass(/nav-reduite/);
+});
+
+test.describe('fonctions avancées', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.evaluate(() => { localStorage.removeItem('scenarios'); localStorage.removeItem('objectifs'); });
+    await page.fill('#revenue', '60000');
+    await page.fill('#investment-amount-period', '400');
+    await page.fill('#cea-period', '200');
+    await expect(page.locator('#resultats')).toBeVisible();
+  });
+
+  test('palette de commandes : saisie directe, action et rubrique', async ({ page }) => {
+    await page.locator('.hero h1').click();
+    await page.keyboard.press('Control+k');
+    await expect(page.locator('#palette')).toBeVisible();
+    await page.keyboard.type('av 500');
+    await expect(page.locator('.pl-option').first()).toContainText('500,000 TND');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#palette')).toBeHidden();
+    await expect.poll(async () => nb(await page.inputValue('#investment-amount-period'))).toBe('500');
+    await page.click('#ouvrir-palette');
+    await page.keyboard.type('stress');
+    await page.keyboard.type('');
+    await page.fill('#pl-champ', 'resistance');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#carte-stress')).toBeInViewport();
+    await page.click('#ouvrir-palette');
+    await page.fill('#pl-champ', 'zzzz');
+    await expect(page.locator('.pl-vide')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#palette')).toBeHidden();
+  });
+
+  test('historique : annuler et rétablir', async ({ page }) => {
+    await page.waitForTimeout(800);
+    await page.fill('#investment-amount-period', '900');
+    await page.waitForTimeout(900);
+    await expect(page.locator('#annuler')).toBeEnabled();
+    await page.click('#annuler');
+    await expect.poll(async () => nb(await page.inputValue('#investment-amount-period'))).toBe('400');
+    await page.click('#retablir');
+    await expect.poll(async () => nb(await page.inputValue('#investment-amount-period'))).toBe('900');
+    await page.locator('.hero h1').click();
+    await page.keyboard.press('Control+z');
+    await expect.poll(async () => nb(await page.inputValue('#investment-amount-period'))).toBe('400');
+  });
+
+  test('comparer des scénarios : ajout, variantes, meilleure valeur, retrait et annulation', async ({ page }) => {
+    await page.click('#scn-ajouter');
+    await page.click('[data-variante="optimal"]');
+    await page.click('[data-variante="avSeule"]');
+    await expect(page.locator('#scn-zone thead th')).toHaveCount(4);
+    await expect(page.locator('#scn-zone td.meilleur').first()).toBeVisible();
+    await page.click('[data-variante="avSeule"]');
+    await expect(page.locator('.toast').last()).toContainText('déjà');
+    await page.click('[data-scn-retirer="2"]');
+    await expect(page.locator('#scn-zone thead th')).toHaveCount(3);
+    await page.locator('.toast .t-action').last().click();
+    await expect(page.locator('#scn-zone thead th')).toHaveCount(4);
+    await page.click('[data-scn-appliquer="1"]');
+    await expect.poll(async () => Number(nb(await page.inputValue('#investment-amount-period')).replace(',', '.'))).toBeGreaterThan(1000);
+  });
+
+  test('couple, objectifs et tests de résistance', async ({ page }) => {
+    await page.fill('#cp-revenu', '25000');
+    await expect(page.locator('#couple-res .cp-tuile')).toHaveCount(2);
+    await expect(page.locator('#couple-res .cp-total')).toContainText('Économie du foyer');
+    await page.click('[data-modele="retraite"]');
+    await page.click('[data-modele="etudes"]');
+    await expect(page.locator('.obj-ligne')).toHaveCount(2);
+    await expect(page.locator('#obj-bilan')).toContainText('Besoin total par mois');
+    await page.fill('#obj0-montant', '1000');
+    await expect(page.locator('#obj0-res')).toContainText('Financé');
+    await expect(page.locator('#stress-liste .st-ligne')).toHaveCount(4);
+    await page.fill('#st-chute', '50');
+    await expect(page.locator('#stress-liste')).toContainText('50,0 %');
+    await page.reload();
+    await expect(page.locator('.obj-ligne')).toHaveCount(2);
+  });
+
+  test('reçu fiscal, classeur Excel et relevé PDF', async ({ page }) => {
+    await page.click('#ouvrir-recu');
+    await expect(page.locator('#recu')).toBeVisible();
+    const [img] = await Promise.all([page.waitForEvent('download'), page.click('#recu-telecharger')]);
+    expect(img.suggestedFilename()).toMatch(/\.png$/);
+    expect(fs.readFileSync(await img.path()).subarray(1, 4).toString()).toBe('PNG');
+    await page.click('#recu-fermer');
+    const [x] = await Promise.all([page.waitForEvent('download'), page.click('#export-xlsx')]);
+    expect(x.suggestedFilename()).toMatch(/\.xlsx$/);
+    const zip = fs.readFileSync(await x.path());
+    expect(zip.subarray(0, 2).toString()).toBe('PK');
+    expect(zip.toString('latin1')).toContain('xl/worksheets/sheet3.xml');
+    const pdf = await page.evaluate(() => {
+      const doc = new window.jspdf.jsPDF({ compress: true });
+      ['Taux de rendement net servi 2025 : 6,25 %', 'Frais de gestion annuels : 0,8 %'].forEach((l, i) => doc.text(l, 10, 10 + i * 10));
+      return Array.from(new Uint8Array(doc.output('arraybuffer')));
+    });
+    await page.setInputFiles('#import-releve', { name: 'releve.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) });
+    await expect(page.locator('#releve-liste .releve-ligne')).toHaveCount(2);
+    await page.click('#releve-appliquer');
+    await expect(page.locator('#p-rendement')).toHaveValue('6,25');
+    await expect(page.locator('#p-frais')).toHaveValue('0,8');
+  });
+
+  test('verrouillage de la saisie et rappels', async ({ page }) => {
+    await page.click('#verrou');
+    await expect(page.locator('#bandeau-verrou')).toBeVisible();
+    expect(await page.evaluate(() => document.getElementById('zone-saisie').inert)).toBe(true);
+    await page.click('#deverrouiller');
+    expect(await page.evaluate(() => document.getElementById('zone-saisie').inert)).toBe(false);
+    /* Chromium sans interface refuse toujours les notifications : autorisation simulée */
+    await page.evaluate(() => {
+      function N() {}
+      N.permission = 'granted';
+      N.requestPermission = () => Promise.resolve('granted');
+      window.Notification = N;
+    });
+    await page.click('#ouvrir-rappels');
+    await expect(page.locator('#rappels')).toBeVisible();
+    await page.selectOption('#rp-jour', '15');
+    await page.check('#rp-actif');
+    await expect(page.locator('#rp-info')).toContainText('Prochain rappel');
+    await page.click('#rp-fermer');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('rappel')).jour)).toBe(15);
+  });
+
+  test('second écran : la fenêtre client reçoit les diapositives', async ({ page, context, isMobile }) => {
+    test.skip(isMobile, 'fenêtres multiples sur ordinateur');
+    await page.click('#presenter');
+    const [client] = await Promise.all([context.waitForEvent('page'), page.click('#pr-ecran')]);
+    await client.waitForLoadState();
+    await expect(client.locator('#pr-diapo')).toContainText('Votre situation');
+    await expect.poll(() => page.evaluate(() => document.getElementById('pr-etat').hidden)).toBe(false);
+    await page.bringToFront();
+    await page.click('#pr-suivant');
+    await expect(client.locator('#pr-diapo')).toContainText('Votre économie d\'impôt');
+    await expect(client.locator('.topbar')).toBeHidden();
+    await page.keyboard.press('Escape');
+    await expect(client.locator('#pr-diapo')).toContainText('Merci de votre attention');
+  });
 });

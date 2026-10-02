@@ -52,6 +52,7 @@
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
+<a class="lien-evitement" id="lien-evitement" href="#contenu">Aller au contenu</a>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
@@ -101,6 +102,19 @@
     <symbol id="i-recherche" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
     <symbol id="i-replier" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16M15.5 10 13.5 12l2 2"/></symbol>
     <symbol id="i-rubriques" viewBox="0 0 24 24"><path d="M4 6h10M4 12h16M4 18h7"/></symbol>
+    <symbol id="i-annuler" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-retablir" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M5 3h14v18l-2.3-1.5L14.3 21 12 19.5 9.7 21l-2.4-1.5L5 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></symbol>
+    <symbol id="i-eclair" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
+    <symbol id="i-comparer" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="2"/><rect x="14" y="4" width="7" height="16" rx="2"/><path d="M6.5 9v6M17.5 12v3"/></symbol>
+    <symbol id="i-anneaux" viewBox="0 0 24 24"><circle cx="9" cy="14" r="6"/><circle cx="15" cy="14" r="6"/><path d="m10 3 2 3 2-3"/></symbol>
+    <symbol id="i-cloche" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="i-ecran" viewBox="0 0 24 24"><rect x="2" y="3" width="13" height="10" rx="2"/><rect x="9" y="11" width="13" height="10" rx="2"/></symbol>
+    <symbol id="i-cadenas" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-fichier" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></symbol>
+    <symbol id="i-gauche" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-droite" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-commande" viewBox="0 0 24 24"><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="m10 8 5 3-5 3z"/><path d="M8 21h8"/></symbol>
     <symbol id="i-agenda" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h2M14 14h2M8 18h2"/></symbol>
@@ -118,15 +132,18 @@
   <div class="topbar-in">
     <a class="brand" href="#" aria-label="Simulateur assurance vie et CEA, accueil">
       <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span>
-      <span class="brand-name">Assurance vie &amp; CEA <span class="brand-tag">TND</span></span>
+      <span class="brand-name">Assurance vie &amp; CEA <span class="brand-tag" translate="no">TND</span></span>
     </a>
     <div class="top-actions">
-      <select class="btn btn-ghost btn-sm select-annee" id="langue" aria-label="Langue" title="Langue">
+      <button type="button" class="btn btn-ghost btn-sm palette-btn" id="ouvrir-palette" aria-label="Rechercher une action" title="Rechercher une action (Ctrl K)" aria-haspopup="dialog">
+        <svg class="ico ico-sm" aria-hidden="true"><use href="#i-recherche"/></svg><span class="lib-btn">Rechercher</span><kbd class="kbd lib-btn" aria-hidden="true">Ctrl K</kbd>
+      </button>
+      <select class="btn btn-ghost btn-sm select-annee" id="langue" aria-label="Langue" title="Langue" name="langue">
         <option value="fr">Français</option>
         <option value="en">English</option>
         <option value="ar">العربية</option>
       </select>
-      <select class="btn btn-ghost btn-sm select-annee" id="annee-bareme" aria-label="Année du barème" hidden></select>
+      <select class="btn btn-ghost btn-sm select-annee" id="annee-bareme" aria-label="Année du barème" hidden name="annee-bareme"></select>
       <button type="button" class="btn btn-ghost btn-sm" id="mode-simple" aria-pressed="false" title="Masque les réglages avancés"><svg class="ico ico-sm"><use href="#i-boussole"/></svg><span class="lib-btn">Mode simple</span></button>
       <button type="button" class="btn btn-ghost btn-sm" id="mode-conseiller" aria-pressed="false" title="Ajoute les références du client et du conseiller au rapport">
         <svg class="ico ico-sm"><use href="#i-users"/></svg><span class="lib-btn">Mode conseiller</span>
@@ -158,7 +175,7 @@
     <span class="rb-poignee" aria-hidden="true"></span>
     <div class="rb-recherche">
       <svg class="ico ico-sm"><use href="#i-recherche"/></svg>
-      <input id="rb-filtre" type="search" autocomplete="off" spellcheck="false" placeholder="Aller à une rubrique…" aria-label="Aller à une rubrique" aria-controls="rb-liste">
+      <input id="rb-filtre" type="search" autocomplete="off" spellcheck="false" placeholder="Aller à une rubrique…" aria-label="Aller à une rubrique" aria-controls="rb-liste" name="rb-filtre">
       <kbd class="rb-touche" aria-hidden="true">/</kbd>
     </div>
     <button type="button" class="rb-fermer" id="rb-fermer" aria-label="Fermer les rubriques"><svg class="ico"><use href="#i-x"/></svg></button>
@@ -175,7 +192,7 @@
   <svg class="ico ico-sm"><use href="#i-rubriques"/></svg><span class="rb-p-lib">Rubriques</span><span class="rb-p-cour" id="rb-p-cour"></span>
 </button>
 
-<main class="page">
+<main class="page" id="contenu" tabindex="-1">
   <div class="entete-rapport" id="entete-rapport" aria-hidden="true">
     <h1>Rapport de simulation : assurance vie et CEA</h1>
     <p id="er-date"></p>
@@ -195,7 +212,7 @@
         <button type="button" class="btn-installer" id="installer" hidden><svg class="ico"><use href="#i-phone"/></svg>Installer l'application</button>
         <a class="hero-author" href="https://www.linkedin.com/in/mohamed-aziz-jaouadi-%D9%85%D8%AD%D9%85%D8%AF-%D8%B9%D8%B2%D9%8A%D8%B2-%D8%A7%D9%84%D8%AC%D9%88%D8%A7%D8%AF%D9%8A-%C2%AEpsm-i-%C2%AEpspo-l-%C2%AEistqb-851009115/" target="_blank" rel="noopener noreferrer">
           <span class="li" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.447 20.452h-3.93v-5.569c0-1.327-.024-3.036-1.849-3.036-1.851 0-2.134 1.447-2.134 2.942v5.663h-3.93V9h3.77v1.561h.054c.525-.998 1.807-2.049 3.721-2.049 3.979 0 4.713 2.618 4.713 6.018v6.922h-.001zM5.337 7.433c-1.27 0-2.297-1.026-2.297-2.295 0-1.269 1.028-2.296 2.297-2.296 1.27 0 2.297 1.027 2.297 2.296 0 1.269-1.028 2.295-2.297 2.295zm1.967 13.019H3.37V9h3.934v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.732v20.535C0 23.227.792 24 1.771 24h20.451c.979 0 1.772-.773 1.772-1.732V1.732C23.998.774 23.205 0 22.225 0z"/></svg></span>
-          <span><small>Application faite par</small>Mohamed Aziz Jaouadi</span>
+          <span><small>Application faite par</small><span translate="no">Mohamed Aziz Jaouadi</span></span>
         </a>
       </div>
     </div>
@@ -204,6 +221,12 @@
   <div class="layout">
     <!-- Colonne des saisies -->
     <div class="col col-saisie">
+      <div class="bandeau-verrou" id="bandeau-verrou" hidden>
+        <svg class="ico" aria-hidden="true"><use href="#i-cadenas"/></svg>
+        <span>Saisie verrouillée pendant la présentation au client.</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="deverrouiller">Déverrouiller</button>
+      </div>
+      <div class="zone-saisie" id="zone-saisie">
       <section class="card" id="carte-conseiller" aria-labelledby="t-conseiller" hidden>
         <div class="card-head">
           <span class="card-ico warm"><svg class="ico"><use href="#i-users"/></svg></span>
@@ -212,15 +235,15 @@
         <div class="fields">
           <div class="field">
             <div class="field-top"><label for="c-client">Nom du client</label></div>
-            <div class="input-wrap"><svg class="ico"><use href="#i-user"/></svg><input id="c-client" class="texte" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Mme Ben Salah"></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-user"/></svg><input id="c-client" class="texte" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Mme Ben Salah…" name="c-client"></div>
           </div>
           <div class="field">
             <div class="field-top"><label for="c-conseiller">Nom du conseiller</label></div>
-            <div class="input-wrap"><svg class="ico"><use href="#i-user"/></svg><input id="c-conseiller" class="texte" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Mohamed Aziz Jaouadi"></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-user"/></svg><input id="c-conseiller" class="texte" type="text" maxlength="80" autocomplete="off" placeholder="Ex. Mohamed Aziz Jaouadi…" name="c-conseiller"></div>
           </div>
           <div class="field">
             <div class="field-top"><label for="c-ref">Référence du dossier</label><span class="hint">Facultatif</span></div>
-            <div class="input-wrap"><svg class="ico"><use href="#i-receipt"/></svg><input id="c-ref" class="texte" type="text" maxlength="40" autocomplete="off" placeholder="Ex. AV-2026-014"></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-receipt"/></svg><input id="c-ref" class="texte" type="text" maxlength="40" autocomplete="off" placeholder="Ex. AV-2026-014…" name="c-ref"></div>
           </div>
         </div>
         <details class="avance" id="agence">
@@ -228,26 +251,26 @@
           <div class="fields agence-champs">
             <div class="field">
               <div class="field-top"><label for="ag-nom">Nom de l'agence</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-flag"/></svg><input id="ag-nom" class="texte" type="text" maxlength="80" autocomplete="organization"></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-flag"/></svg><input id="ag-nom" class="texte" type="text" maxlength="80" autocomplete="organization" name="ag-nom"></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="ag-tel">Téléphone</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-chat"/></svg><input id="ag-tel" class="texte" type="tel" maxlength="40" autocomplete="tel"></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-chat"/></svg><input id="ag-tel" class="texte" type="tel" maxlength="40" autocomplete="tel" name="ag-tel"></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="ag-email">E-mail</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-mail"/></svg><input id="ag-email" class="texte" type="email" maxlength="80" autocomplete="email"></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-mail"/></svg><input id="ag-email" class="texte" type="email" maxlength="80" autocomplete="email" name="ag-email"></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="ag-adresse">Adresse</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-flag"/></svg><input id="ag-adresse" class="texte" type="text" maxlength="120" autocomplete="street-address"></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-flag"/></svg><input id="ag-adresse" class="texte" type="text" maxlength="120" autocomplete="street-address" name="ag-adresse"></div>
             </div>
             <div class="field">
               <div class="field-top"><span class="lbl">Logo de l'agence</span><span class="hint">PNG ou JPEG</span></div>
               <div class="logo-ligne">
                 <span class="logo-apercu" id="ag-logo-apercu" aria-hidden="true"></span>
                 <label class="btn btn-ghost btn-sm" for="ag-logo"><svg class="ico ico-sm"><use href="#i-upload"/></svg>Choisir un logo</label>
-                <input id="ag-logo" class="sr-only" type="file" accept="image/png,image/jpeg,image/webp">
+                <input id="ag-logo" class="sr-only" type="file" accept="image/png,image/jpeg,image/webp" name="ag-logo">
                 <button type="button" class="btn btn-ghost btn-sm btn-icon" id="ag-logo-retirer" aria-label="Retirer le logo" title="Retirer le logo" hidden><svg class="ico ico-sm"><use href="#i-trash"/></svg></button>
               </div>
             </div>
@@ -255,7 +278,7 @@
             <div class="field">
               <div class="field-top"><label for="ag-couleur">Couleur de l'agence</label><span class="hint">Interface et PDF</span></div>
               <div class="logo-ligne">
-                <input id="ag-couleur" class="couleur" type="color" value="#4f46e5">
+                <input id="ag-couleur" class="couleur" type="color" value="#4f46e5" name="ag-couleur">
                 <button type="button" class="btn btn-ghost btn-sm" id="ag-couleur-raz">Couleurs d'origine</button>
               </div>
             </div>
@@ -273,10 +296,10 @@
             <div class="field-top"><label for="revenue">Revenu brut annuel imposable</label></div>
             <div class="input-wrap">
               <svg class="ico"><use href="#i-cash"/></svg>
-              <input id="revenue" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 45 000" aria-describedby="revenue-err">
-              <span class="suffix">TND</span>
+              <input id="revenue" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 45 000…" aria-describedby="revenue-err" name="revenue">
+              <span class="suffix" translate="no">TND</span>
             </div>
-            <input class="range" type="range" id="revenue-r" min="0" max="200000" step="1000" value="0" aria-label="Revenu brut annuel, curseur" tabindex="-1">
+            <input class="range" type="range" id="revenue-r" min="0" max="200000" step="1000" value="0" aria-label="Revenu brut annuel, curseur" tabindex="-1" name="revenue-r">
             <div class="range-scale"><span>0</span><span>100 k</span><span>200 k</span></div>
             <p class="field-err" id="revenue-err"></p>
             <p class="field-warn" id="revenue-amb" hidden></p>
@@ -296,7 +319,7 @@
               <div class="c-hint">100 TND par enfant, 400 max.</div>
               <div class="stepper" data-for="children">
                 <button type="button" data-pas="-1" aria-label="Retirer un enfant à charge"><svg class="ico ico-sm"><use href="#i-minus"/></svg></button>
-                <input id="children" type="text" inputmode="numeric" value="0" autocomplete="off">
+                <input id="children" type="text" inputmode="numeric" value="0" autocomplete="off" name="children">
                 <button type="button" data-pas="1" aria-label="Ajouter un enfant à charge"><svg class="ico ico-sm"><use href="#i-plus"/></svg></button>
               </div>
             </div>
@@ -305,7 +328,7 @@
               <div class="c-hint">2 000 TND par enfant</div>
               <div class="stepper" data-for="disabled-children">
                 <button type="button" data-pas="-1" aria-label="Retirer un enfant infirme"><svg class="ico ico-sm"><use href="#i-minus"/></svg></button>
-                <input id="disabled-children" type="text" inputmode="numeric" value="0" autocomplete="off">
+                <input id="disabled-children" type="text" inputmode="numeric" value="0" autocomplete="off" name="disabled-children">
                 <button type="button" data-pas="1" aria-label="Ajouter un enfant infirme"><svg class="ico ico-sm"><use href="#i-plus"/></svg></button>
               </div>
             </div>
@@ -314,7 +337,7 @@
               <div class="c-hint">1 000 TND par étudiant, 4 000 max.</div>
               <div class="stepper" data-for="students">
                 <button type="button" data-pas="-1" aria-label="Retirer un étudiant"><svg class="ico ico-sm"><use href="#i-minus"/></svg></button>
-                <input id="students" type="text" inputmode="numeric" value="0" autocomplete="off">
+                <input id="students" type="text" inputmode="numeric" value="0" autocomplete="off" name="students">
                 <button type="button" data-pas="1" aria-label="Ajouter un étudiant"><svg class="ico ico-sm"><use href="#i-plus"/></svg></button>
               </div>
             </div>
@@ -323,7 +346,7 @@
               <div class="c-hint">450 TND par parent</div>
               <div class="stepper" data-for="parents" data-max="2">
                 <button type="button" data-pas="-1" aria-label="Retirer un parent à charge"><svg class="ico ico-sm"><use href="#i-minus"/></svg></button>
-                <input id="parents" type="text" inputmode="numeric" value="0" autocomplete="off">
+                <input id="parents" type="text" inputmode="numeric" value="0" autocomplete="off" name="parents">
                 <button type="button" data-pas="1" aria-label="Ajouter un parent à charge"><svg class="ico ico-sm"><use href="#i-plus"/></svg></button>
               </div>
             </div>
@@ -352,27 +375,27 @@
             <div class="field-top"><label for="investment-amount-period" id="lbl-period">Versement assurance vie par mois</label></div>
             <div class="input-wrap">
               <svg class="ico"><use href="#i-coins"/></svg>
-              <input id="investment-amount-period" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 500" aria-describedby="period-err">
-              <span class="suffix">TND</span>
+              <input id="investment-amount-period" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 500…" aria-describedby="period-err" name="investment-amount-period">
+              <span class="suffix" translate="no">TND</span>
             </div>
             <p class="field-err" id="period-err"></p>
             <p class="field-warn" id="period-amb" hidden></p>
           </div>
           <div class="field" id="f-av-initial">
             <div class="field-top"><label for="av-initial">Versement initial en assurance vie</label><span class="hint">Facultatif</span></div>
-            <div class="input-wrap"><svg class="ico"><use href="#i-piggy"/></svg><input id="av-initial" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0"><span class="suffix">TND</span></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-piggy"/></svg><input id="av-initial" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0" name="av-initial"><span class="suffix" translate="no">TND</span></div>
           </div>
           </div>
           <div class="produit produit-cea">
           <h3 class="produit-titre"><span class="pastille-produit cea"></span>Compte Épargne en Actions (CEA)<span class="hint">100 000 TND déductibles par an · bloqué 5 ans · impôt minimum 60 %</span></h3>
           <div class="field" id="f-cea">
             <div class="field-top"><label for="cea-period" id="lbl-cea">Versement CEA par mois</label></div>
-            <div class="input-wrap"><svg class="ico"><use href="#i-chart"/></svg><input id="cea-period" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0"><span class="suffix">TND</span></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-chart"/></svg><input id="cea-period" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0" name="cea-period"><span class="suffix" translate="no">TND</span></div>
             <p class="field-warn" id="cea-amb" hidden></p>
           </div>
           <div class="field" id="f-cea-initial">
             <div class="field-top"><label for="cea-initial">Versement initial sur le CEA</label><span class="hint">Facultatif</span></div>
-            <div class="input-wrap"><svg class="ico"><use href="#i-piggy"/></svg><input id="cea-initial" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0"><span class="suffix">TND</span></div>
+            <div class="input-wrap"><svg class="ico"><use href="#i-piggy"/></svg><input id="cea-initial" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="0" name="cea-initial"><span class="suffix" translate="no">TND</span></div>
           </div>
           </div>
           <p class="field-err" id="montants-err"></p>
@@ -407,14 +430,15 @@
             <div class="field-top"><label for="inv-cible">Mode inverse : économie d'impôt annuelle visée</label></div>
             <div class="input-wrap">
               <svg class="ico"><use href="#i-target"/></svg>
-              <input id="inv-cible" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 1 500" aria-describedby="inv-res">
-              <span class="suffix">TND</span>
+              <input id="inv-cible" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 1 500…" aria-describedby="inv-res" name="inv-cible">
+              <span class="suffix" translate="no">TND</span>
             </div>
           </div>
           <p class="inv-res" id="inv-res" aria-live="polite"></p>
           <button type="button" class="btn btn-ghost btn-sm" id="inv-appliquer" hidden><svg class="ico ico-sm"><use href="#i-check"/></svg>Appliquer ce montant</button>
         </div>
       </section>
+      </div>
     </div>
 
     <!-- Colonne des résultats -->
@@ -444,11 +468,21 @@
             <button type="button" class="btn btn-ghost btn-sm" id="presenter"><svg class="ico ico-sm"><use href="#i-play"/></svg>Présenter au client</button>
             <button type="button" class="btn btn-ghost btn-sm" id="proposition"><svg class="ico ico-sm"><use href="#i-signature"/></svg>Proposition commerciale (PDF)</button>
             <button type="button" class="btn btn-ghost btn-sm" id="agenda"><svg class="ico ico-sm"><use href="#i-agenda"/></svg>Ajouter à l'agenda</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="ouvrir-recu"><svg class="ico ico-sm"><use href="#i-ticket"/></svg>Reçu fiscal à partager</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="export-xlsx"><svg class="ico ico-sm"><use href="#i-table"/></svg>Classeur Excel</button>
+            <label class="btn btn-ghost btn-sm" for="import-releve"><svg class="ico ico-sm"><use href="#i-fichier"/></svg>Importer un relevé PDF</label>
+            <input class="sr-only" type="file" id="import-releve" name="import-releve" accept="application/pdf,.pdf">
+            <button type="button" class="btn btn-ghost btn-sm" id="ouvrir-rappels"><svg class="ico ico-sm"><use href="#i-cloche"/></svg>Rappels de versement</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="verrou" aria-pressed="false"><svg class="ico ico-sm"><use href="#i-cadenas"/></svg>Verrouiller la saisie</button>
+            <span class="historique" role="group" aria-label="Historique des saisies">
+              <button type="button" class="btn btn-ghost btn-sm btn-icon" id="annuler" aria-label="Annuler la dernière modification" title="Annuler (Ctrl Z)" disabled><svg class="ico ico-sm"><use href="#i-annuler"/></svg></button>
+              <button type="button" class="btn btn-ghost btn-sm btn-icon" id="retablir" aria-label="Rétablir la modification" title="Rétablir (Ctrl Maj Z)" disabled><svg class="ico ico-sm"><use href="#i-retablir"/></svg></button>
+            </span>
           </div>
           <div class="partage" id="panneau-partage" hidden>
             <label for="lien-partage">Lien de la simulation (les noms du client et du conseiller n'y figurent pas)</label>
             <div class="partage-ligne">
-              <input id="lien-partage" type="text" readonly>
+              <input id="lien-partage" type="text" readonly name="lien-partage">
               <button type="button" class="btn btn-ghost btn-sm" id="copier-lien"><svg class="ico ico-sm"><use href="#i-share"/></svg>Copier</button>
             </div>
             <div class="qr" id="qr-lien" role="img" aria-label="QR code du lien de la simulation"></div>
@@ -542,30 +576,30 @@
           <div class="proj-champs">
             <div class="field">
               <div class="field-top"><label for="p-duree">Durée</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="p-duree" type="text" inputmode="numeric" autocomplete="off" value="10"><span class="suffix">ans</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="p-duree" type="text" inputmode="numeric" autocomplete="off" value="10" name="p-duree"><span class="suffix">ans</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-compar">Placement classique</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-compar" type="text" inputmode="decimal" autocomplete="off" value="4"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-compar" type="text" inputmode="decimal" autocomplete="off" value="4" name="p-compar"><span class="suffix">%</span></div>
             </div>
           </div>
           <h3 class="produit-titre"><span class="pastille-produit av"></span>Assurance vie</h3>
           <div class="proj-champs">
             <div class="field">
               <div class="field-top"><label for="p-rendement">Taux servi estimé</label><span class="hint">Garanti + participation</span></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-rendement" type="text" inputmode="decimal" autocomplete="off" value="6"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-rendement" type="text" inputmode="decimal" autocomplete="off" value="6" name="p-rendement"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-garanti">Taux minimum garanti</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-garanti" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-garanti" type="text" inputmode="decimal" autocomplete="off" value="0" name="p-garanti"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-frais">Frais de gestion</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais" type="text" inputmode="decimal" autocomplete="off" value="1"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais" type="text" inputmode="decimal" autocomplete="off" value="1" name="p-frais"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-frais-entree">Frais sur versement</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais-entree" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais-entree" type="text" inputmode="decimal" autocomplete="off" value="0" name="p-frais-entree"><span class="suffix">%</span></div>
             </div>
           </div>
           <p class="hint-bloc pb" id="p-participation"></p>
@@ -573,26 +607,26 @@
           <div class="proj-champs">
             <div class="field">
               <div class="field-top"><label for="p-rend-cea">Rendement annuel du CEA</label><span class="hint">Actions cotées</span></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-rend-cea" type="text" inputmode="decimal" autocomplete="off" value="8"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-rend-cea" type="text" inputmode="decimal" autocomplete="off" value="8" name="p-rend-cea"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-frais-cea">Frais du CEA (droits de garde)</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais-cea" type="text" inputmode="decimal" autocomplete="off" value="0,5"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-frais-cea" type="text" inputmode="decimal" autocomplete="off" value="0,5" name="p-frais-cea"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-ecart-cea">Écart entre scénarios du CEA</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-ecart-cea" type="text" inputmode="decimal" autocomplete="off" value="4"><span class="suffix">pts</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-ecart-cea" type="text" inputmode="decimal" autocomplete="off" value="4" name="p-ecart-cea"><span class="suffix">pts</span></div>
             </div>
           </div>
-          <label class="case"><input type="checkbox" id="p-retraite"><span>Calculer la durée jusqu'à la retraite</span></label>
+          <label class="case"><input type="checkbox" id="p-retraite" name="p-retraite"><span>Calculer la durée jusqu'à la retraite</span></label>
           <div class="proj-champs retraite" id="bloc-retraite" hidden>
             <div class="field">
               <div class="field-top"><label for="p-age">Âge actuel</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-user"/></svg><input id="p-age" type="text" inputmode="numeric" autocomplete="off" placeholder="Ex. 35"><span class="suffix">ans</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-user"/></svg><input id="p-age" type="text" inputmode="numeric" autocomplete="off" placeholder="Ex. 35…" name="p-age"><span class="suffix">ans</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-depart">Âge de départ à la retraite</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-flag"/></svg><input id="p-depart" type="text" inputmode="numeric" autocomplete="off" value="60"><span class="suffix">ans</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-flag"/></svg><input id="p-depart" type="text" inputmode="numeric" autocomplete="off" value="60" name="p-depart"><span class="suffix">ans</span></div>
             </div>
           </div>
           <p class="field-err" id="retraite-err"></p>
@@ -601,7 +635,7 @@
             <div class="proj-champs">
               <div class="field">
                 <div class="field-top"><label for="p-support">Type de support</label></div>
-                <div class="input-wrap"><select id="p-support">
+                <div class="input-wrap"><select id="p-support" name="p-support">
                   <option value="euros">Fonds en euros (écart ± 1 pt)</option>
                   <option value="equilibre" selected>Multisupport équilibré (écart ± 2 pts)</option>
                   <option value="dynamique">Unités de compte dynamiques (écart ± 4 pts)</option>
@@ -610,19 +644,19 @@
               </div>
               <div class="field">
                 <div class="field-top"><label for="p-ecart">Écart entre scénarios</label></div>
-                <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-ecart" type="text" inputmode="decimal" autocomplete="off" value="2"><span class="suffix">pts</span></div>
+                <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-ecart" type="text" inputmode="decimal" autocomplete="off" value="2" name="p-ecart"><span class="suffix">pts</span></div>
               </div>
               <div class="field">
                 <div class="field-top"><label for="p-croissance">Hausse annuelle du revenu et des versements</label></div>
-                <div class="input-wrap"><svg class="ico"><use href="#i-chart"/></svg><input id="p-croissance" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+                <div class="input-wrap"><svg class="ico"><use href="#i-chart"/></svg><input id="p-croissance" type="text" inputmode="decimal" autocomplete="off" value="0" name="p-croissance"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <div class="field-top"><label for="p-inflation">Inflation annuelle</label></div>
-                <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-inflation" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+                <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-inflation" type="text" inputmode="decimal" autocomplete="off" value="0" name="p-inflation"><span class="suffix">%</span></div>
               </div>
               <div class="field">
                 <div class="field-top"><label for="p-impot-interets">Impôt sur les intérêts du placement classique</label></div>
-                <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-impot-interets" type="text" inputmode="decimal" autocomplete="off" value="20"><span class="suffix">%</span></div>
+                <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="p-impot-interets" type="text" inputmode="decimal" autocomplete="off" value="20" name="p-impot-interets"><span class="suffix">%</span></div>
               </div>
             </div>
             <div class="sous-bloc">
@@ -637,17 +671,17 @@
               <div class="proj-champs">
             <div class="field">
               <div class="field-top"><label for="p-retrait-debut">À partir de l'année</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="p-retrait-debut" type="text" inputmode="numeric" autocomplete="off" placeholder="Ex. 9"><span class="suffix">an</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="p-retrait-debut" type="text" inputmode="numeric" autocomplete="off" placeholder="Ex. 9…" name="p-retrait-debut"><span class="suffix">an</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="p-retrait-montant">Montant retiré par an</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="p-retrait-montant" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span class="suffix">TND</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="p-retrait-montant" type="text" inputmode="decimal" autocomplete="off" placeholder="0" name="p-retrait-montant"><span class="suffix" translate="no">TND</span></div>
             </div>
               </div>
             </div>
             <p class="hint-bloc">Le barème et les déductions restent ceux de l'année choisie pendant toute la projection. Avec une inflation, le capital est aussi présenté en dinars constants (pouvoir d'achat d'aujourd'hui).</p>
           </details>
-          <label class="case"><input type="checkbox" id="p-reinvest"><span>Réinvestir chaque année l'économie d'impôt dans le contrat</span></label>
+          <label class="case"><input type="checkbox" id="p-reinvest" name="p-reinvest"><span>Réinvestir chaque année l'économie d'impôt dans le contrat</span></label>
           <p class="field-err" id="proj-err"></p>
 
           <div class="objectif" id="bloc-objectif">
@@ -655,8 +689,8 @@
               <div class="field-top"><label for="obj-capital">Objectif de capital au terme</label><span class="hint">Scénario médian</span></div>
               <div class="input-wrap">
                 <svg class="ico"><use href="#i-target"/></svg>
-                <input id="obj-capital" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 100 000">
-                <span class="suffix">TND</span>
+                <input id="obj-capital" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="Ex. 100 000…" name="obj-capital">
+                <span class="suffix" translate="no">TND</span>
               </div>
             </div>
             <p class="inv-res" id="obj-res" aria-live="polite"></p>
@@ -668,12 +702,12 @@
             <div class="et-si-ligne">
               <label for="si-versement">Versement assurance vie par mois</label>
               <output id="si-versement-val" for="si-versement"></output>
-              <input class="range" type="range" id="si-versement" min="0" max="2000" step="10" value="0">
+              <input class="range" type="range" id="si-versement" min="0" max="2000" step="10" value="0" name="si-versement">
             </div>
             <div class="et-si-ligne">
               <label for="si-duree">Durée</label>
               <output id="si-duree-val" for="si-duree"></output>
-              <input class="range" type="range" id="si-duree" min="1" max="40" step="1" value="10">
+              <input class="range" type="range" id="si-duree" min="1" max="40" step="1" value="10" name="si-duree">
             </div>
           </div>
           <div id="proj-vide" class="remark"><svg class="ico ico-sm"><use href="#i-info"/></svg><span>Saisissez un montant à investir pour voir la projection.</span></div>
@@ -686,7 +720,7 @@
             <div class="graphe-interactif" id="graph-capital"></div>
             <div class="curseur-annee">
               <label for="annee-curseur">Année</label>
-              <input class="range" type="range" id="annee-curseur" min="0" max="10" step="1" value="10">
+              <input class="range" type="range" id="annee-curseur" min="0" max="10" step="1" value="10" name="annee-curseur">
               <output id="annee-curseur-val" for="annee-curseur"></output>
             </div>
             <div class="lecture-annee" id="lecture-annee" aria-live="polite"></div>
@@ -710,11 +744,11 @@
           <div class="proj-champs expert">
             <div class="field">
               <div class="field-top"><label for="mc-vol-av">Volatilité annuelle de l'assurance vie</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="mc-vol-av" type="text" inputmode="decimal" autocomplete="off" value="1,5"><span class="suffix">pts</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="mc-vol-av" type="text" inputmode="decimal" autocomplete="off" value="1,5" name="mc-vol-av"><span class="suffix">pts</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="mc-vol-cea">Volatilité annuelle du CEA</label><span class="hint">Actions</span></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="mc-vol-cea" type="text" inputmode="decimal" autocomplete="off" value="15"><span class="suffix">pts</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="mc-vol-cea" type="text" inputmode="decimal" autocomplete="off" value="15" name="mc-vol-cea"><span class="suffix">pts</span></div>
             </div>
           </div>
           <p class="field-err" id="mc-err"></p>
@@ -722,6 +756,43 @@
           <div class="graphe-interactif" id="graph-mc"></div>
           <p class="legende"><span class="l lmc1"></span><span>8 cas sur 10</span> <span class="l lmc2"></span><span>1 cas sur 2</span> <span class="l l1"></span><span>Médiane</span> <span class="l lv"></span><span>Versements cumulés</span></p>
           <div class="remark"><svg class="ico ico-sm"><use href="#i-info"/></svg><span>Résultats probabilistes indicatifs, fondés sur des hypothèses de rendement et de volatilité : ils ne préjugent pas des performances futures.</span></div>
+        </section>
+
+        <section class="card" id="carte-stress" aria-labelledby="t-stress" hidden>
+          <div class="card-head">
+            <span class="card-ico warm"><svg class="ico"><use href="#i-eclair"/></svg></span>
+            <div><h2 class="card-title" id="t-stress">Tests de résistance</h2><p class="card-sub">Le capital face aux coups durs</p></div>
+            <button type="button" class="aide" aria-expanded="false" aria-controls="aide-stress" aria-label="Explication" title="Explication"><svg class="ico ico-sm"><use href="#i-info"/></svg></button>
+          </div>
+          <p class="aide-texte" id="aide-stress" hidden>Chaque test rejoue le scénario médian en ne dégradant qu'une hypothèse : un krach (le CEA chute, l'assurance vie ne sert que son taux garanti cette année-là), une pause des versements (sans économie d'impôt ces années-là), des rendements durablement plus bas ou une inflation élevée.</p>
+          <div class="stress-champs expert">
+            <div class="field"><div class="field-top"><label for="st-krach">Krach l'année</label></div><div class="input-wrap"><input id="st-krach" name="st-krach" type="number" inputmode="numeric" min="1" max="40" value="3" autocomplete="off"></div></div>
+            <div class="field"><div class="field-top"><label for="st-chute">Chute du CEA</label></div><div class="input-wrap"><input id="st-chute" name="st-chute" type="text" inputmode="decimal" value="30" autocomplete="off"><span class="suffix">%</span></div></div>
+            <div class="field"><div class="field-top"><label for="st-pause">Pause à partir de l'année</label></div><div class="input-wrap"><input id="st-pause" name="st-pause" type="number" inputmode="numeric" min="1" max="40" value="2" autocomplete="off"></div></div>
+            <div class="field"><div class="field-top"><label for="st-duree">Durée de la pause</label></div><div class="input-wrap"><input id="st-duree" name="st-duree" type="number" inputmode="numeric" min="1" max="40" value="1" autocomplete="off"><span class="suffix">ans</span></div></div>
+            <div class="field"><div class="field-top"><label for="st-baisse">Baisse des rendements</label></div><div class="input-wrap"><input id="st-baisse" name="st-baisse" type="text" inputmode="decimal" value="2" autocomplete="off"><span class="suffix">pts</span></div></div>
+            <div class="field"><div class="field-top"><label for="st-inflation">Inflation élevée</label></div><div class="input-wrap"><input id="st-inflation" name="st-inflation" type="text" inputmode="decimal" value="8" autocomplete="off"><span class="suffix">%</span></div></div>
+          </div>
+          <p class="field-err" id="st-err"></p>
+          <div class="stress-liste" id="stress-liste"></div>
+        </section>
+
+        <section class="card" id="carte-objectifs" aria-labelledby="t-objectifs">
+          <div class="card-head">
+            <span class="card-ico green"><svg class="ico"><use href="#i-flag"/></svg></span>
+            <div><h2 class="card-title" id="t-objectifs">Objectifs de vie</h2><p class="card-sub">Retraite, études, logement : l'épargne à prévoir pour chacun</p></div>
+            <button type="button" class="aide" aria-expanded="false" aria-controls="aide-objectifs" aria-label="Explication" title="Explication"><svg class="ico ico-sm"><use href="#i-info"/></svg></button>
+          </div>
+          <p class="aide-texte" id="aide-objectifs" hidden>Pour chaque projet, le simulateur calcule le versement mensuel nécessaire au rendement net de l'assurance vie (taux servi moins frais de gestion), en tenant compte de ce qui est déjà épargné. Votre épargne mensuelle actuelle est affectée aux projets les plus proches en premier.</p>
+          <div class="obj-modeles" role="group" aria-label="Ajouter un objectif">
+            <button type="button" class="puce" data-modele="retraite"><svg class="ico ico-sm"><use href="#i-plus"/></svg>Retraite</button>
+            <button type="button" class="puce" data-modele="etudes"><svg class="ico ico-sm"><use href="#i-plus"/></svg>Études des enfants</button>
+            <button type="button" class="puce" data-modele="logement"><svg class="ico ico-sm"><use href="#i-plus"/></svg>Achat immobilier</button>
+            <button type="button" class="puce" data-modele="libre"><svg class="ico ico-sm"><use href="#i-plus"/></svg>Autre projet</button>
+          </div>
+          <div class="obj-liste" id="obj-liste"></div>
+          <p class="hint-bloc pb" id="obj-vide">Ajoutez un projet pour voir l'épargne mensuelle qu'il demande.</p>
+          <div class="obj-bilan" id="obj-bilan" hidden></div>
         </section>
 
         <section class="card expert" id="carte-strategie" aria-labelledby="t-strat" hidden>
@@ -748,29 +819,69 @@
           </div>
           <div class="offres">
             <div class="offre" data-offre="a">
-              <div class="field"><div class="field-top"><label for="oa-nom">Nom de l'offre</label></div><div class="input-wrap"><input id="oa-nom" class="texte" type="text" maxlength="40" autocomplete="off" placeholder="Offre A"></div></div>
-              <div class="field"><div class="field-top"><label for="oa-servi">Taux servi</label></div><div class="input-wrap"><input id="oa-servi" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="oa-garanti">Taux garanti</label></div><div class="input-wrap"><input id="oa-garanti" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="oa-gestion">Frais de gestion</label></div><div class="input-wrap"><input id="oa-gestion" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="oa-versement">Frais sur versement</label></div><div class="input-wrap"><input id="oa-versement" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="oa-nom">Nom de l'offre</label></div><div class="input-wrap"><input id="oa-nom" class="texte" type="text" maxlength="40" autocomplete="off" placeholder="Offre A" name="oa-nom"></div></div>
+              <div class="field"><div class="field-top"><label for="oa-servi">Taux servi</label></div><div class="input-wrap"><input id="oa-servi" type="text" inputmode="decimal" autocomplete="off" name="oa-servi"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="oa-garanti">Taux garanti</label></div><div class="input-wrap"><input id="oa-garanti" type="text" inputmode="decimal" autocomplete="off" name="oa-garanti"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="oa-gestion">Frais de gestion</label></div><div class="input-wrap"><input id="oa-gestion" type="text" inputmode="decimal" autocomplete="off" name="oa-gestion"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="oa-versement">Frais sur versement</label></div><div class="input-wrap"><input id="oa-versement" type="text" inputmode="decimal" autocomplete="off" name="oa-versement"><span class="suffix">%</span></div></div>
             </div>
             <div class="offre" data-offre="b">
-              <div class="field"><div class="field-top"><label for="ob-nom">Nom de l'offre</label></div><div class="input-wrap"><input id="ob-nom" class="texte" type="text" maxlength="40" autocomplete="off" placeholder="Offre B"></div></div>
-              <div class="field"><div class="field-top"><label for="ob-servi">Taux servi</label></div><div class="input-wrap"><input id="ob-servi" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="ob-garanti">Taux garanti</label></div><div class="input-wrap"><input id="ob-garanti" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="ob-gestion">Frais de gestion</label></div><div class="input-wrap"><input id="ob-gestion" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="ob-versement">Frais sur versement</label></div><div class="input-wrap"><input id="ob-versement" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="ob-nom">Nom de l'offre</label></div><div class="input-wrap"><input id="ob-nom" class="texte" type="text" maxlength="40" autocomplete="off" placeholder="Offre B" name="ob-nom"></div></div>
+              <div class="field"><div class="field-top"><label for="ob-servi">Taux servi</label></div><div class="input-wrap"><input id="ob-servi" type="text" inputmode="decimal" autocomplete="off" name="ob-servi"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="ob-garanti">Taux garanti</label></div><div class="input-wrap"><input id="ob-garanti" type="text" inputmode="decimal" autocomplete="off" name="ob-garanti"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="ob-gestion">Frais de gestion</label></div><div class="input-wrap"><input id="ob-gestion" type="text" inputmode="decimal" autocomplete="off" name="ob-gestion"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="ob-versement">Frais sur versement</label></div><div class="input-wrap"><input id="ob-versement" type="text" inputmode="decimal" autocomplete="off" name="ob-versement"><span class="suffix">%</span></div></div>
             </div>
             <div class="offre" data-offre="c">
-              <div class="field"><div class="field-top"><label for="oc-nom">Nom de l'offre</label></div><div class="input-wrap"><input id="oc-nom" class="texte" type="text" maxlength="40" autocomplete="off" placeholder="Offre C"></div></div>
-              <div class="field"><div class="field-top"><label for="oc-servi">Taux servi</label></div><div class="input-wrap"><input id="oc-servi" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="oc-garanti">Taux garanti</label></div><div class="input-wrap"><input id="oc-garanti" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="oc-gestion">Frais de gestion</label></div><div class="input-wrap"><input id="oc-gestion" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
-              <div class="field"><div class="field-top"><label for="oc-versement">Frais sur versement</label></div><div class="input-wrap"><input id="oc-versement" type="text" inputmode="decimal" autocomplete="off"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="oc-nom">Nom de l'offre</label></div><div class="input-wrap"><input id="oc-nom" class="texte" type="text" maxlength="40" autocomplete="off" placeholder="Offre C" name="oc-nom"></div></div>
+              <div class="field"><div class="field-top"><label for="oc-servi">Taux servi</label></div><div class="input-wrap"><input id="oc-servi" type="text" inputmode="decimal" autocomplete="off" name="oc-servi"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="oc-garanti">Taux garanti</label></div><div class="input-wrap"><input id="oc-garanti" type="text" inputmode="decimal" autocomplete="off" name="oc-garanti"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="oc-gestion">Frais de gestion</label></div><div class="input-wrap"><input id="oc-gestion" type="text" inputmode="decimal" autocomplete="off" name="oc-gestion"><span class="suffix">%</span></div></div>
+              <div class="field"><div class="field-top"><label for="oc-versement">Frais sur versement</label></div><div class="input-wrap"><input id="oc-versement" type="text" inputmode="decimal" autocomplete="off" name="oc-versement"><span class="suffix">%</span></div></div>
             </div>
           </div>
           <p class="hint-bloc pb">L'offre A reprend les hypothèses de la projection ; renseignez une ou deux autres offres (taux servi l'an dernier, taux garanti et frais figurant au contrat).</p>
           <div class="table-wrap" id="contrats-res" hidden tabindex="0" aria-label="Comparaison des contrats, défilable"></div>
+        </section>
+
+        <section class="card" id="carte-scenarios" aria-labelledby="t-scenarios">
+          <div class="card-head">
+            <span class="card-ico"><svg class="ico"><use href="#i-comparer"/></svg></span>
+            <div><h2 class="card-title" id="t-scenarios">Comparer des scénarios</h2><p class="card-sub">Jusqu'à 4 variantes du même client, côte à côte</p></div>
+          </div>
+          <div class="scn-actions">
+            <button type="button" class="btn btn-primaire btn-sm" id="scn-ajouter"><svg class="ico ico-sm"><use href="#i-plus"/></svg>Ajouter la simulation actuelle</button>
+            <div class="scn-variantes" role="group" aria-label="Variantes proposées">
+              <button type="button" class="puce" data-variante="optimal">Montant optimal</button>
+              <button type="button" class="puce" data-variante="avSeule">Tout en assurance vie</button>
+              <button type="button" class="puce" data-variante="moitie">Moitié en CEA</button>
+              <button type="button" class="puce" data-variante="plus100">100 TND de plus par mois</button>
+            </div>
+          </div>
+          <p class="hint-bloc pb" id="scn-vide">Ajoutez la simulation actuelle puis une ou plusieurs variantes : la meilleure valeur de chaque ligne est signalée par ★.</p>
+          <div class="table-wrap" id="scn-zone" hidden tabindex="0" aria-label="Comparaison des scénarios, défilable"></div>
+        </section>
+
+        <section class="card expert" id="carte-couple" aria-labelledby="t-couple">
+          <div class="card-head">
+            <span class="card-ico warm"><svg class="ico"><use href="#i-anneaux"/></svg></span>
+            <div><h2 class="card-title" id="t-couple">Simulation du couple</h2><p class="card-sub">Répartir l'assurance vie entre les deux conjoints</p></div>
+            <button type="button" class="aide" aria-expanded="false" aria-controls="aide-couple" aria-label="Explication" title="Explication"><svg class="ico ico-sm"><use href="#i-info"/></svg></button>
+          </div>
+          <p class="aide-texte" id="aide-couple" hidden>Chaque conjoint est imposé séparément ; les déductions familiales (chef de famille, enfants, parents) reviennent au chef de famille. Le simulateur teste toutes les répartitions du budget d'assurance vie du foyer entre les deux contrats et retient celle qui maximise l'économie d'impôt totale.</p>
+          <div class="proj-champs">
+            <div class="field"><div class="field-top"><label for="cp-revenu">Revenu du conjoint</label><span class="hint">Brut annuel imposable</span></div><div class="input-wrap"><input id="cp-revenu" name="cp-revenu" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex. 30 000…"><span class="suffix" translate="no">TND</span></div></div>
+            <div class="field"><div class="field-top"><label for="cp-budget">Assurance vie du foyer par an</label></div><div class="input-wrap"><input id="cp-budget" name="cp-budget" type="text" inputmode="decimal" autocomplete="off"><span class="suffix" translate="no">TND</span></div></div>
+          </div>
+          <div class="field">
+            <div class="field-top"><span class="lbl" id="lbl-cp-chef">Chef de famille</span></div>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-cp-chef" id="cp-chef">
+              <button type="button" role="radio" aria-checked="true" data-val="1">Vous</button>
+              <button type="button" role="radio" aria-checked="false" data-val="2">Votre conjoint</button>
+            </div>
+          </div>
+          <p class="field-err" id="cp-err"></p>
+          <div class="couple-res" id="couple-res" hidden></div>
         </section>
 
         <section class="card expert" id="carte-rachat" aria-labelledby="t-rachat" hidden>
@@ -790,15 +901,15 @@
           <div class="proj-champs">
             <div class="field">
               <div class="field-top"><label for="r-annee">Année du rachat</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="r-annee" type="text" inputmode="numeric" autocomplete="off" value="5"><span class="suffix">an</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="r-annee" type="text" inputmode="numeric" autocomplete="off" value="5" name="r-annee"><span class="suffix">an</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="r-part">Part rachetée</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="r-part" type="text" inputmode="decimal" autocomplete="off" value="100"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="r-part" type="text" inputmode="decimal" autocomplete="off" value="100" name="r-part"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="r-penalite">Pénalité de rachat du contrat</label><span class="hint">Selon le contrat</span></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="r-penalite" type="text" inputmode="decimal" autocomplete="off" value="0"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="r-penalite" type="text" inputmode="decimal" autocomplete="off" value="0" name="r-penalite"><span class="suffix">%</span></div>
             </div>
           </div>
           <p class="field-err" id="rachat-err"></p>
@@ -810,15 +921,15 @@
             <div class="proj-champs agence-champs">
             <div class="field">
               <div class="field-top"><label for="a-montant">Montant de l'avance</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="a-montant" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex. 5 000"><span class="suffix">TND</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="a-montant" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex. 5 000…" name="a-montant"><span class="suffix" translate="no">TND</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="a-taux">Taux de l'avance</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="a-taux" type="text" inputmode="decimal" autocomplete="off" value="7"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="a-taux" type="text" inputmode="decimal" autocomplete="off" value="7" name="a-taux"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="a-duree">Durée de remboursement</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="a-duree" type="text" inputmode="numeric" autocomplete="off" value="24"><span class="suffix">mois</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="a-duree" type="text" inputmode="numeric" autocomplete="off" value="24" name="a-duree"><span class="suffix">mois</span></div>
             </div>
             </div>
             <p class="field-err" id="avance-err"></p>
@@ -836,23 +947,23 @@
           <div class="proj-champs">
             <div class="field">
               <div class="field-top"><label for="v-duree-rente">Durée de service de la rente</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="v-duree-rente" type="text" inputmode="numeric" autocomplete="off" value="20"><span class="suffix">ans</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="v-duree-rente" type="text" inputmode="numeric" autocomplete="off" value="20" name="v-duree-rente"><span class="suffix">ans</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="v-taux-rente">Taux technique</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="v-taux-rente" type="text" inputmode="decimal" autocomplete="off" value="3"><span class="suffix">%</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-percent"/></svg><input id="v-taux-rente" type="text" inputmode="decimal" autocomplete="off" value="3" name="v-taux-rente"><span class="suffix">%</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="v-deces-annee">Décès survenant en année</label></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="v-deces-annee" type="text" inputmode="numeric" autocomplete="off" value="5"><span class="suffix">an</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-calendar"/></svg><input id="v-deces-annee" type="text" inputmode="numeric" autocomplete="off" value="5" name="v-deces-annee"><span class="suffix">an</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="v-garanti">Capital garanti en cas de décès</label><span class="hint">Facultatif</span></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-umbrella"/></svg><input id="v-garanti" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span class="suffix">TND</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-umbrella"/></svg><input id="v-garanti" type="text" inputmode="decimal" autocomplete="off" placeholder="0" name="v-garanti"><span class="suffix" translate="no">TND</span></div>
             </div>
             <div class="field">
               <div class="field-top"><label for="v-pension">Pension de retraite mensuelle estimée</label><span class="hint">Facultatif</span></div>
-              <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="v-pension" type="text" inputmode="decimal" autocomplete="off" placeholder="0"><span class="suffix">TND</span></div>
+              <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="v-pension" type="text" inputmode="decimal" autocomplete="off" placeholder="0" name="v-pension"><span class="suffix" translate="no">TND</span></div>
             </div>
           </div>
           <p class="field-err" id="prev-err"></p>
@@ -877,7 +988,7 @@
       <button type="button" class="btn btn-ghost btn-sm" id="port-export" disabled><svg class="ico ico-sm"><use href="#i-table"/></svg>Exporter en Excel</button>
       <button type="button" class="btn btn-ghost btn-sm" id="port-sauver" disabled><svg class="ico ico-sm"><use href="#i-download"/></svg>Sauvegarder (fichier)</button>
       <label class="btn btn-ghost btn-sm" for="port-restaurer"><svg class="ico ico-sm"><use href="#i-upload"/></svg>Restaurer une sauvegarde</label>
-      <input id="port-restaurer" class="sr-only" type="file" accept="application/json,.json">
+      <input id="port-restaurer" class="sr-only" type="file" accept="application/json,.json" name="port-restaurer">
       <button type="button" class="btn btn-ghost btn-sm" id="port-vider" disabled><svg class="ico ico-sm"><use href="#i-trash"/></svg>Tout supprimer</button>
     </div>
     <div class="port-stats" id="port-stats" hidden>
@@ -911,7 +1022,7 @@
 
   <footer class="foot">
     <span>Simulation indicative, sans valeur contractuelle : les montants sont calculés au millime selon le barème progressif.</span>
-    <span>© <span id="annee"></span> · <a href="https://www.linkedin.com/in/mohamed-aziz-jaouadi-%D9%85%D8%AD%D9%85%D8%AF-%D8%B9%D8%B2%D9%8A%D8%B2-%D8%A7%D9%84%D8%AC%D9%88%D8%A7%D8%AF%D9%8A-%C2%AEpsm-i-%C2%AEpspo-l-%C2%AEistqb-851009115/" target="_blank" rel="noopener noreferrer">Mohamed Aziz Jaouadi</a></span>
+    <span>© <span id="annee"></span> · <a href="https://www.linkedin.com/in/mohamed-aziz-jaouadi-%D9%85%D8%AD%D9%85%D8%AF-%D8%B9%D8%B2%D9%8A%D8%B2-%D8%A7%D9%84%D8%AC%D9%88%D8%A7%D8%AF%D9%8A-%C2%AEpsm-i-%C2%AEpspo-l-%C2%AEistqb-851009115/" target="_blank" rel="noopener noreferrer" translate="no">Mohamed Aziz Jaouadi</a></span>
   </footer>
 </main>
 
@@ -928,7 +1039,7 @@
     <div class="guide-etape" data-etape="1">
       <h3>Quel est votre revenu brut annuel imposable ?</h3>
       <p class="hint-bloc">Le salaire annuel imposable figurant sur votre attestation de revenus.</p>
-      <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="g-revenu" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex. 45 000"><span class="suffix">TND</span></div>
+      <div class="input-wrap"><svg class="ico"><use href="#i-cash"/></svg><input id="g-revenu" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex. 45 000…" name="g-revenu"><span class="suffix" translate="no">TND</span></div>
       <p class="field-err" id="g-revenu-err"></p>
     </div>
     <div class="guide-etape" data-etape="2" hidden>
@@ -938,15 +1049,15 @@
         <button type="button" role="radio" aria-checked="false" data-val="1">Chef de famille</button>
       </div>
       <div class="guide-compteurs">
-        <label>Enfants à charge<input id="g-enfants" type="number" min="0" max="20" value="0" inputmode="numeric"></label>
-        <label>Étudiants sans bourse<input id="g-etudiants" type="number" min="0" max="20" value="0" inputmode="numeric"></label>
-        <label>Parents à charge<input id="g-parents" type="number" min="0" max="2" value="0" inputmode="numeric"></label>
+        <label>Enfants à charge<input id="g-enfants" type="number" min="0" max="20" value="0" inputmode="numeric" name="g-enfants"></label>
+        <label>Étudiants sans bourse<input id="g-etudiants" type="number" min="0" max="20" value="0" inputmode="numeric" name="g-etudiants"></label>
+        <label>Parents à charge<input id="g-parents" type="number" min="0" max="2" value="0" inputmode="numeric" name="g-parents"></label>
       </div>
     </div>
     <div class="guide-etape" data-etape="3" hidden>
       <h3>Combien pouvez-vous épargner par mois ?</h3>
       <p class="hint-bloc" id="g-conseil"></p>
-      <div class="input-wrap"><svg class="ico"><use href="#i-coins"/></svg><input id="g-versement" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex. 500"><span class="suffix">TND</span></div>
+      <div class="input-wrap"><svg class="ico"><use href="#i-coins"/></svg><input id="g-versement" type="text" inputmode="decimal" autocomplete="off" placeholder="Ex. 500…" name="g-versement"><span class="suffix" translate="no">TND</span></div>
       <button type="button" class="btn btn-ghost btn-sm" id="g-optimal"><svg class="ico ico-sm"><use href="#i-bulb"/></svg><span>Utiliser le montant optimal</span></button>
       <p class="field-err" id="g-versement-err"></p>
     </div>
@@ -958,17 +1069,81 @@
   </div>
 </dialog>
 
+<dialog class="palette" id="palette" aria-label="Rechercher une action">
+  <div class="pl-tete">
+    <svg class="ico" aria-hidden="true"><use href="#i-recherche"/></svg>
+    <input id="pl-champ" name="pl-champ" type="text" role="combobox" aria-expanded="true" aria-controls="pl-liste" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Une action, une rubrique ou une saisie : « 60000 », « av 500 », « 20 ans »…" aria-label="Rechercher une action">
+    <kbd class="kbd" aria-hidden="true">Échap</kbd>
+  </div>
+  <div class="pl-liste" id="pl-liste" role="listbox" aria-label="Résultats"></div>
+  <div class="pl-pied" aria-hidden="true"><span><kbd class="kbd">↑</kbd><kbd class="kbd">↓</kbd> naviguer</span><span><kbd class="kbd">Entrée</kbd> valider</span><span><kbd class="kbd">Ctrl K</kbd> ouvrir</span></div>
+</dialog>
+
+<dialog class="fenetre-installation recu-fenetre" id="recu" aria-labelledby="recu-titre">
+  <div class="fi-tete">
+    <img src="assets/icon-192.png" alt="" width="64" height="64">
+    <div><h2 id="recu-titre">Reçu fiscal à partager</h2><p>Une image prête pour WhatsApp, LinkedIn ou Instagram</p></div>
+  </div>
+  <div class="recu-scene"><div class="recu-fente" aria-hidden="true"></div><canvas id="recu-canvas" width="1080" height="1350" role="img" aria-label="Aperçu du reçu fiscal"></canvas></div>
+  <div class="fi-actions">
+    <button type="button" class="btn btn-ghost" id="recu-fermer">Fermer</button>
+    <button type="button" class="btn btn-ghost" id="recu-telecharger"><svg class="ico"><use href="#i-download"/></svg>Télécharger l'image</button>
+    <button type="button" class="btn btn-primaire" id="recu-partager"><svg class="ico"><use href="#i-share"/></svg>Partager</button>
+  </div>
+</dialog>
+
+<dialog class="fenetre-installation" id="rappels" aria-labelledby="rappels-titre">
+  <div class="fi-tete">
+    <img src="assets/icon-192.png" alt="" width="64" height="64">
+    <div><h2 id="rappels-titre">Rappels de versement</h2><p>Une notification le jour de chaque versement</p></div>
+  </div>
+  <div class="fi-corps">
+    <label class="case"><input type="checkbox" id="rp-actif" name="rp-actif"><span>Activer les rappels sur cet appareil</span></label>
+    <div class="field rp-jour">
+      <div class="field-top"><label for="rp-jour">Jour du versement</label></div>
+      <div class="input-wrap"><select id="rp-jour" name="rp-jour"></select></div>
+    </div>
+    <p class="hint-bloc" id="rp-info"></p>
+    <p class="field-err" id="rp-err"></p>
+  </div>
+  <div class="fi-actions">
+    <button type="button" class="btn btn-ghost" id="rp-essai">Tester la notification</button>
+    <button type="button" class="btn btn-primaire" id="rp-fermer">Terminé</button>
+  </div>
+</dialog>
+
+<dialog class="fenetre-installation" id="releve" aria-labelledby="releve-titre">
+  <div class="fi-tete">
+    <img src="assets/icon-192.png" alt="" width="64" height="64">
+    <div><h2 id="releve-titre">Relevé importé</h2><p id="releve-fichier"></p></div>
+  </div>
+  <div class="fi-corps">
+    <p id="releve-msg"></p>
+    <div class="releve-liste" id="releve-liste"></div>
+    <p class="hint-bloc">Vérifiez chaque valeur avec le document : seules les cases cochées sont appliquées. Le fichier reste sur cet appareil.</p>
+  </div>
+  <div class="fi-actions">
+    <button type="button" class="btn btn-ghost" id="releve-fermer">Fermer</button>
+    <button type="button" class="btn btn-primaire" id="releve-appliquer"><svg class="ico"><use href="#i-check"/></svg>Appliquer la sélection</button>
+  </div>
+</dialog>
+
 <div class="presentation" id="presentation" hidden role="dialog" aria-modal="true" aria-label="Présentation au client">
   <div class="pr-aurora" aria-hidden="true"></div>
   <div class="pr-haut">
     <span class="pr-marque"><img src="assets/icon-192.png" alt="" width="36" height="36"><span id="pr-agence">Assurance vie &amp; CEA</span></span>
-    <button type="button" class="pr-fermer" id="pr-fermer" aria-label="Fermer la présentation"><svg class="ico"><use href="#i-x"/></svg></button>
+    <span class="pr-outils">
+      <span class="pr-etat" id="pr-etat" hidden></span>
+      <button type="button" class="pr-fermer" id="pr-ecran" aria-label="Afficher sur un second écran" title="Afficher sur un second écran"><svg class="ico"><use href="#i-ecran"/></svg></button>
+      <button type="button" class="pr-fermer" id="pr-plein" aria-label="Plein écran" title="Plein écran" hidden><svg class="ico"><use href="#i-play"/></svg></button>
+      <button type="button" class="pr-fermer" id="pr-fermer" aria-label="Fermer la présentation"><svg class="ico"><use href="#i-x"/></svg></button>
+    </span>
   </div>
   <div class="pr-diapo" id="pr-diapo" aria-live="polite"></div>
   <div class="pr-bas">
-    <button type="button" class="pr-nav" id="pr-precedent" aria-label="Diapositive précédente">‹</button>
+    <button type="button" class="pr-nav" id="pr-precedent" aria-label="Diapositive précédente"><svg class="ico"><use href="#i-gauche"/></svg></button>
     <div class="pr-points" id="pr-points"></div>
-    <button type="button" class="pr-nav" id="pr-suivant" aria-label="Diapositive suivante">›</button>
+    <button type="button" class="pr-nav" id="pr-suivant" aria-label="Diapositive suivante"><svg class="ico"><use href="#i-droite"/></svg></button>
   </div>
 </div>
 
@@ -1015,6 +1190,15 @@
 <script src="js/contrats.js"></script>
 <script src="js/calendrier.js"></script>
 <script src="js/theme.js"></script>
+<script src="js/stress.js"></script>
+<script src="js/couple.js"></script>
+<script src="js/objectifs.js"></script>
+<script src="js/comparateur.js"></script>
+<script src="js/historique.js"></script>
+<script src="js/xlsx.js"></script>
+<script src="js/releve.js"></script>
+<script src="js/commandes.js"></script>
+<script src="js/rappels.js"></script>
 <script src="js/graphiques.js"></script>
 <script src="js/i18n.js"></script>
 <script src="assets/vendor/qrcode.js" defer></script>

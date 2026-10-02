@@ -43,7 +43,7 @@
     return (neg ? '−' : '') + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ',' + p[1];
   }
   function fmtTND(v) { return fmtAmount(v) + ' TND'; }
-  function fmtHtml(v) { return fmtAmount(v) + '<span class="unit">TND</span>'; }
+  function fmtHtml(v) { return fmtAmount(v) + '<span class="unit" translate="no">TND</span>'; }
   function fmtEntier(v) { return esp(nfEntier.format(Math.floor(v))); }
   function fmtPct(v) { return esp(nf1.format(v)) + ' %'; }
   function fmtSigne(v) { return (v >= 0.0005 ? '+' : '') + fmtTND(v); }
@@ -53,6 +53,17 @@
   function lire(id) { return Saisie.lireNombre($(id).value); }
   function nombre(id) { return lire(id).v; }
 
+  /* Montants isolés de gauche à droite dans un texte déjà échappé (lecture correcte en arabe) */
+  function bidi(html) {
+    /* Les entités (&#39; …) sont laissées intactes */
+    return html.replace(/&nbsp;/g, '\u00a0').split(/(&#?\w+;)/).map(function (morceau) {
+      if (/^&#?\w+;$/.test(morceau)) return morceau;
+      return morceau.replace(/[+\u2212-]?\d[\d\s\u00a0\u202f,.]*(?:\s?(?:→|%)\s?\d[\d\s\u00a0\u202f,.]*)?(?:\s?(?:TND|%))?/g, function (m) {
+        var fin = m.match(/\s+$/);
+        return '<bdi dir="ltr">' + m.trim() + '</bdi>' + (fin ? fin[0] : '');
+      });
+    }).join('');
+  }
   function echapper(s) {
     return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
@@ -72,16 +83,32 @@
     el._raf = requestAnimationFrame(pas);
   }
 
-  function toast(message, type) {
+  /* action = { libelle, executer } : bouton dans le message (annulation), affiché plus longtemps */
+  function toast(message, type, action) {
     var zone = $('toasts');
     var el = document.createElement('div');
-    el.className = 'toast' + (type === 'erreur' ? ' toast-erreur' : '');
-    el.innerHTML = '<span class="t-ico"><svg class="ico"><use href="#' + (type === 'erreur' ? 'i-alert' : 'i-check') + '"/></svg></span><span></span>';
-    el.lastChild.textContent = message;
+    el.className = 'toast' + (type === 'erreur' ? ' toast-erreur' : '') + (action ? ' toast-action' : '');
+    el.innerHTML = '<span class="t-ico" aria-hidden="true"><svg class="ico"><use href="#' + (type === 'erreur' ? 'i-alert' : 'i-check') + '"/></svg></span><span class="t-msg"></span>';
+    el.querySelector('.t-msg').textContent = message;
+    var fini = false;
+    function fermer() {
+      if (fini) return;
+      fini = true;
+      el.classList.add('sortie');
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240);
+    }
+    if (action) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 't-action';
+      b.textContent = action.libelle;
+      b.addEventListener('click', function () { fermer(); action.executer(); });
+      el.appendChild(b);
+    }
     zone.appendChild(el);
     while (zone.children.length > 2) zone.removeChild(zone.firstChild);
     vibrer(type === 'erreur' ? [20, 60, 20] : 10);
-    setTimeout(function () { el.classList.add('sortie'); setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240); }, 3200);
+    setTimeout(fermer, action ? 6000 : 3200);
   }
 
   function telecharger(nom, contenu, type) {
@@ -304,6 +331,7 @@
     var etat = lireEtat();
     var calc = Scenario.calculer(etat);
     ui.calc = calc;
+    noterHistorique();
     var sim = calc.sim;
     var factor = calc.facteur;
 
@@ -341,6 +369,9 @@
     majPrevoyance();
     majStrategie(calc);
     majContrats(calc);
+    majStress(calc);
+    majCouple();
+    majObjectifs();
     planifierMonteCarlo(calc);
     if (etaitCache) ['graph-economie', 'graph-capital'].forEach(function (id) { animerTrace($(id)); });
     if (!$('panneau-partage').hidden) majPartage();
@@ -359,6 +390,7 @@
   }
   function afficherIndicateurs(sim) {
     animer($('tax-saved'), sim.economie, fmtHtml);
+    celebrerPlancher(sim);
     $('tax-saved-monthly').textContent = fmtTND(sim.economie / 12);
     var deux = sim.economieAv > 0.0005 && sim.economieCea > 0.0005;
     $('repartition-economie').hidden = !deux;
@@ -437,14 +469,14 @@
   }
 
   function afficherCourbeEconomie(sim, investissement) {
-    $('graph-economie').innerHTML = Graph.courbeEconomie({
+    morpher($('graph-economie'), Graph.courbeEconomie({
       points: pointsEconomie(sim, investissement), optimal: sim.optimal, courant: investissement,
       economieCourante: Moteur.economiePourInvestissement(sim, investissement)
     }, {
       aria: t('Courbe de l\'économie d\'impôt selon le montant investi en assurance vie par an'),
       x: t('Assurance vie investie par an (TND)'),
       optimal: t('Optimal')
-    });
+    }));
   }
 
   /* ===================================================================
@@ -591,6 +623,7 @@
     $('carte-rachat').hidden = !actif;
     $('carte-prevoyance').hidden = !actif || !calc.aAv;
     $('carte-mc').hidden = !actif;
+    $('carte-stress').hidden = !actif;
     $('carte-strategie').hidden = !actif;
     $('carte-contrats').hidden = !actif || !calc.aAv;
     if (!actif) return;
@@ -605,7 +638,7 @@
       ? t('Dont taux garanti {0} et participation aux bénéfices estimée {1}. Le scénario prudent ne descend pas sous le taux garanti.', [fmtPct(e.tauxGarantiPct), fmtPct(Math.max(0, e.rendementPct - e.tauxGarantiPct))])
       : t('Indiquez le taux minimum garanti du contrat : le scénario prudent ne descendra pas en dessous.');
     var reel = calc.etat.inflationPct > 0;
-    $('graph-capital').innerHTML = Graph.courbeCapital(sc, { aria: t('Capital constitué par année selon trois scénarios de rendement'), x: t('Années') }, reel);
+    morpher($('graph-capital'), Graph.courbeCapital(sc, { aria: t('Capital constitué par année selon trois scénarios de rendement'), x: t('Années') }, reel));
     $('leg-reel').hidden = !reel;
     majCurseurAnnee(calc);
     $('proj-lignes').innerHTML = lignesProjection(calc).map(function (l) { return ligne(l[0], l[1], l[2]); }).join('');
@@ -1234,6 +1267,8 @@
     afficherPortefeuille();
     if ($('fenetre-installation').open) remplirFenetre();
     construireNav();
+    afficherScenarios();
+    construireObjectifs();
     if ($('guide').open) majGuide();
     if (!$('presentation').hidden) { pres.liste = diapositives(); afficherDiapo(0); }
     if (ui.mc) afficherMonteCarlo();
@@ -1244,7 +1279,14 @@
      Événements
      =================================================================== */
   var attente = null;
-  function planifier() { clearTimeout(attente); attente = setTimeout(function () { attente = null; calculateAndDisplay(); }, 60); }
+  function planifier() {
+    clearTimeout(attente);
+    attente = setTimeout(function () {
+      attente = null;
+      /* Première apparition des résultats : transition de vue */
+      if ($('resultats').hidden && lire('revenue').v > 0) transitionVue(calculateAndDisplay); else calculateAndDisplay();
+    }, 60);
+  }
   /* Applique un recalcul encore en attente (clic juste après une saisie) */
   function actualiser() { if (attente) { clearTimeout(attente); attente = null; calculateAndDisplay(); } }
 
@@ -1454,7 +1496,12 @@
       toast(t('Simulation ouverte.'));
     }
     if (suppr && depot) {
-      depot.supprimer(suppr.dataset.suppr).then(rafraichirPortefeuille).then(function () { toast(t('Simulation supprimée.')); });
+      var supprime = ui.portefeuille.filter(function (x) { return x.id === suppr.dataset.suppr; })[0];
+      depot.supprimer(suppr.dataset.suppr).then(rafraichirPortefeuille).then(function () {
+        toast(t('Simulation supprimée.'), null, supprime ? { libelle: t('Annuler'), executer: function () {
+          depot.ajouter(supprime).then(rafraichirPortefeuille).then(function () { toast(t('Simulation restaurée.')); });
+        } } : null);
+      });
     }
   });
   $('port-comparer').addEventListener('click', function () {
@@ -1492,7 +1539,11 @@
     $('theme-toggle').setAttribute('aria-expanded', String(ouvrir));
     if (ouvrir) { var b = p.querySelector('[aria-checked="true"]'); if (b) b.focus(); }
   }
-  brancherSegments('choix-theme', function (v) { appliquerTheme(v, true); });
+  brancherSegments('choix-theme', function (v) {
+    var c = pointTheme || (function () { var r = $('theme-toggle').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })();
+    pointTheme = null;
+    transitionVue(function () { appliquerTheme(v, true); }, c);
+  });
   $('theme-toggle').addEventListener('click', function () { ouvrirMenuTheme($('panneau-theme').hidden); });
   document.addEventListener('click', function (e) { if (!$('panneau-theme').hidden && !e.target.closest('.menu-theme')) ouvrirMenuTheme(false); });
   $('panneau-theme').addEventListener('keydown', function (e) { if (e.key === 'Escape') { ouvrirMenuTheme(false); $('theme-toggle').focus(); } });
@@ -1672,7 +1723,7 @@
     try { localStorage.setItem('modeSimple', actif ? '1' : '0'); } catch (e) {}
     if (annoncer) toast(actif ? t('Mode simple : seuls les résultats essentiels sont affichés.') : t('Mode expert : tous les réglages sont affichés.'));
   }
-  $('mode-simple').addEventListener('click', function () { appliquerModeSimple(!document.body.classList.contains('mode-simple'), true); });
+  $('mode-simple').addEventListener('click', function () { var v = !document.body.classList.contains('mode-simple'); transitionVue(function () { appliquerModeSimple(v, true); }); });
 
   /* ===================================================================
      « Et si… ? » : curseurs du versement mensuel et de la durée
@@ -1880,9 +1931,9 @@
     var mc = calculerMonteCarlo(calc);
     if (!mc) { $('mc-phrases').innerHTML = ''; $('graph-mc').innerHTML = ''; return; }
     $('mc-phrases').innerHTML = phrasesMonteCarlo(mc).map(function (x) { return '<p class="mc-phrase ' + x[0] + '">' + echapper(x[1]) + '</p>'; }).join('');
-    $('graph-mc').innerHTML = Graph.eventail(mc, calc.med.annees.map(function (a) { return a.verse; }), {
+    morpher($('graph-mc'), Graph.eventail(mc, calc.med.annees.map(function (a) { return a.verse; }), {
       aria: t('Éventail des capitaux possibles selon 5 000 trajectoires de marché'), x: t('Années'), objectif: t('Objectif')
-    });
+    }));
     if (premier) animerTrace($('graph-mc'));
   }
   function planifierMonteCarlo(calc) {
@@ -2192,6 +2243,7 @@
     $('pr-precedent').disabled = i === 0;
     $('pr-suivant').disabled = i === liste.length - 1;
     animerTrace(el.querySelector('.pr-graphe'));
+    envoyerDiapo();
   }
   function allerDiapo(k) {
     if (k < 0 || k >= pres.liste.length || k === pres.i) return;
@@ -2221,6 +2273,8 @@
     if (p.hidden) return;
     p.hidden = true;
     document.body.classList.remove('presentation-ouverte');
+    if (pres.canal) pres.canal.postMessage({ type: 'fin' });
+    pres.telecommande = false;
     try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {}); } catch (e) {}
     if (pres.retour && pres.retour.focus) pres.retour.focus();
   }
@@ -2229,9 +2283,13 @@
   $('pr-precedent').addEventListener('click', function () { allerDiapo(pres.i - 1); });
   $('pr-suivant').addEventListener('click', function () { allerDiapo(pres.i + 1); });
   $('pr-points').addEventListener('click', function (e) { var b = e.target.closest('[data-i]'); if (b) allerDiapo(+b.dataset.i); });
-  document.addEventListener('fullscreenchange', function () { if (!document.fullscreenElement && !$('presentation').hidden && pres.pleinEcran) fermerPresentation(); pres.pleinEcran = !!document.fullscreenElement; });
+  /* Sortie du plein écran (Échap) : fin de la présentation, sauf en télécommande d'un second écran */
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && !$('presentation').hidden && pres.pleinEcran && !pres.telecommande && !ecranClient) fermerPresentation();
+    pres.pleinEcran = !!document.fullscreenElement;
+  });
   document.addEventListener('keydown', function (e) {
-    if ($('presentation').hidden) return;
+    if ($('presentation').hidden || ecranClient) return;
     var rtl = document.documentElement.dir === 'rtl';
     if (e.key === 'Escape') { e.preventDefault(); fermerPresentation(); }
     else if (e.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || e.key === 'PageDown' || (e.key === ' ' && e.target.tagName !== 'BUTTON')) { e.preventDefault(); allerDiapo(pres.i + 1); }
@@ -2245,7 +2303,7 @@
       else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
     }
   });
-  $('presentation').addEventListener('pointerdown', function (e) { pres.x0 = e.clientX; });
+  $('presentation').addEventListener('pointerdown', function (e) { pres.x0 = ecranClient ? null : e.clientX; });
   $('presentation').addEventListener('pointerup', function (e) {
     if (pres.x0 == null) return;
     var dx = e.clientX - pres.x0;
@@ -2316,8 +2374,14 @@
     ['Projection', [
       ['projection', 'section[aria-labelledby="t-proj"]', 'Projection du capital', 'i-target'],
       ['mc', '#carte-mc', 'Projection probabiliste', 'i-des'],
+      ['stress', '#carte-stress', 'Tests de résistance', 'i-eclair'],
+      ['objectifs', '#carte-objectifs', 'Objectifs de vie', 'i-flag']
+    ]],
+    ['Comparer et optimiser', [
       ['strategie', '#carte-strategie', 'Stratégie optimale', 'i-boussole'],
-      ['contrats', '#carte-contrats', 'Comparateur de contrats', 'i-balance']
+      ['contrats', '#carte-contrats', 'Comparateur de contrats', 'i-balance'],
+      ['scenarios', '#carte-scenarios', 'Comparer des scénarios', 'i-comparer'],
+      ['couple', '#carte-couple', 'Simulation du couple', 'i-anneaux']
     ]],
     ['Sortie et prévoyance', [
       ['rachat', '#carte-rachat', 'Rachat anticipé', 'i-logout'],
@@ -2376,6 +2440,16 @@
         var m = ui.contrats && ui.contrats.filter(function (r) { return r.meilleur; })[0];
         return m ? '★ ' + m.nom : '';
       case 'portefeuille': return ui.portefeuille.length ? t('{0} simulation(s)', [ui.portefeuille.length]) : '';
+      case 'stress':
+        if (!ui.stress) return '';
+        var pire = Math.min.apply(null, ui.stress.tests.filter(function (x) { return x.cle !== 'inflation'; }).map(function (x) { return x.ecartPct; }));
+        return t('{0} au pire', [fmtPct(pire)]);
+      case 'objectifs':
+        var po = ui.planObjectifs;
+        if (!po || !ui.objectifs.length) return '';
+        return po.manque > 0.5 ? t('{0} par mois à trouver', [fmtEntier(po.manque) + ' TND']) : t('Tous financés');
+      case 'scenarios': return ui.scenarios.length ? t('{0} scénario(s)', [ui.scenarios.length]) : '';
+      case 'couple': return ui.couple ? t('{0} pour le foyer', [fmtEntier(ui.couple.total) + ' TND']) : '';
       default: return '';
     }
   }
@@ -2400,7 +2474,7 @@
       var val = e === 'visible' ? valeurRubrique(it.cle) : '';
       if (v.textContent !== val) {
         /* Montants isolés de gauche à droite (lecture correcte en arabe) */
-        v.innerHTML = echapper(val).replace(/\+?\d[\d\s,.]*(?:\s?→\s?\d[\d\s,.]*)?(?:\s?TND)?/g, function (m) { return '<bdi dir="ltr">' + m.trim() + '</bdi> '; }).trim();
+        v.innerHTML = bidi(echapper(val));
       }
     });
     /* Titres de groupe sans rubrique affichée : masqués */
@@ -2591,10 +2665,924 @@
   if (window.MutationObserver) {
     var obs = new MutationObserver(planifierNav);
     obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    ['resultats', 'carte-conseiller', 'carte-mc', 'carte-strategie', 'carte-contrats', 'carte-rachat', 'carte-prevoyance', 'mc-phrases', 'strat-resume', 'contrats-res', 'port-liste'].forEach(function (id) {
+    ['resultats', 'carte-conseiller', 'carte-mc', 'carte-stress', 'carte-strategie', 'carte-contrats', 'carte-rachat', 'carte-prevoyance', 'mc-phrases', 'strat-resume', 'contrats-res', 'port-liste'].forEach(function (id) {
       if ($(id)) obs.observe($(id), { attributes: true, attributeFilter: ['hidden'], childList: true });
     });
   }
+
+  /* ===================================================================
+     Stockage local tolérant (navigation privée, stockage désactivé)
+     =================================================================== */
+  function lireLocal(cle, defaut) { try { var v = JSON.parse(localStorage.getItem(cle) || 'null'); return v == null ? defaut : v; } catch (e) { return defaut; } }
+  function ecrireLocal(cle, v) { try { localStorage.setItem(cle, JSON.stringify(v)); return true; } catch (e) { return false; } }
+
+  /* ===================================================================
+     Historique des saisies : annuler / rétablir (Ctrl Z, Ctrl Maj Z, Ctrl Y)
+     =================================================================== */
+  var hist = window.Historique.creer(60);
+  var attenteHist = null, restauration = false;
+  function noterHistorique() {
+    if (restauration) return;
+    clearTimeout(attenteHist);
+    attenteHist = setTimeout(function () { attenteHist = null; if (hist.ajouter(lireEtat())) majBoutonsHist(); }, 700);
+  }
+  function majBoutonsHist() {
+    $('annuler').disabled = !hist.peutAnnuler();
+    $('retablir').disabled = !hist.peutRetablir();
+  }
+  function naviguerHist(sens) {
+    actualiser();
+    if (attenteHist) { clearTimeout(attenteHist); attenteHist = null; hist.ajouter(lireEtat()); }
+    var avant = ui.calc ? ui.calc.sim.economie : 0;
+    var e = sens < 0 ? hist.annuler() : hist.retablir();
+    if (!e) { toast(sens < 0 ? t('Rien à annuler.') : t('Rien à rétablir.')); return; }
+    restauration = true;
+    try { appliquerEtat(e); } finally { restauration = false; }
+    majBoutonsHist();
+    var apres = ui.calc ? ui.calc.sim.economie : 0;
+    toast((sens < 0 ? t('Modification annulée') : t('Modification rétablie')) + (Math.abs(apres - avant) > 0.0005 ? ' · ' + t('économie {0} → {1}', [fmtTND(avant), fmtTND(apres)]) : ''));
+  }
+  $('annuler').addEventListener('click', function () { naviguerHist(-1); });
+  $('retablir').addEventListener('click', function () { naviguerHist(1); });
+  function champTexte(el) { return el && (el.tagName === 'TEXTAREA' || el.isContentEditable || (el.tagName === 'INPUT' && /^(text|search|tel|email|url|number|password)$/.test(el.type))); }
+  document.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    var k = e.key.toLowerCase();
+    if (k !== 'z' && k !== 'y') return;
+    /* Dans un champ, l'annulation native du texte reste prioritaire */
+    if (champTexte(document.activeElement) || !$('presentation').hidden || document.querySelector('dialog[open]')) return;
+    e.preventDefault();
+    naviguerHist(k === 'y' || e.shiftKey ? 1 : -1);
+  });
+
+  /* ===================================================================
+     Transitions de vue (révélation des résultats, mode simple, thème)
+     =================================================================== */
+  function transitionVue(fn, cercle) {
+    if (!document.startViewTransition || mouvementReduit.matches) { fn(); return; }
+    var racine = document.documentElement;
+    if (cercle) racine.classList.add('vt-cercle');
+    var vt = document.startViewTransition(fn);
+    if (cercle) {
+      vt.ready.then(function () {
+        var r = Math.hypot(Math.max(cercle.x, innerWidth - cercle.x), Math.max(cercle.y, innerHeight - cercle.y));
+        racine.animate({ clipPath: ['circle(0px at ' + cercle.x + 'px ' + cercle.y + 'px)', 'circle(' + r + 'px at ' + cercle.x + 'px ' + cercle.y + 'px)'] },
+          { duration: 520, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', pseudoElement: '::view-transition-new(root)' });
+      }).catch(function () {});
+    }
+    vt.finished.then(function () { racine.classList.remove('vt-cercle'); }, function () { racine.classList.remove('vt-cercle'); });
+  }
+  var pointTheme = null;
+  $('choix-theme').addEventListener('pointerdown', function (e) { pointTheme = { x: e.clientX, y: e.clientY }; });
+
+  /* ===================================================================
+     Courbes qui se transforment au lieu d'être redessinées
+     =================================================================== */
+  var NOMBRE = /-?\d+(?:\.\d+)?/g;
+  function morpher(c, html) {
+    var anciens = {};
+    Array.prototype.forEach.call(c.querySelectorAll('svg > path[class]'), function (p) { anciens[p.getAttribute('class')] = p.getAttribute('d'); });
+    c.innerHTML = html;
+    if (c._morph) cancelAnimationFrame(c._morph);
+    if (mouvementReduit.matches || c.classList.contains('anime') || document.hidden) return;
+    var paires = [];
+    Array.prototype.forEach.call(c.querySelectorAll('svg > path[class]'), function (p) {
+      var a = anciens[p.getAttribute('class')], b = p.getAttribute('d');
+      if (!a || !b || a === b) return;
+      var na = a.match(NOMBRE), nb = b.match(NOMBRE);
+      if (!na || !nb || na.length !== nb.length) return;
+      paires.push({ p: p, de: na.map(Number), vers: nb.map(Number), morceaux: b.split(NOMBRE) });
+    });
+    if (!paires.length) return;
+    var t0 = performance.now(), duree = 340;
+    function pas(tps) {
+      var k = Math.min(1, (tps - t0) / duree), e = 1 - Math.pow(1 - k, 3);
+      paires.forEach(function (x) {
+        var d = x.morceaux[0];
+        for (var i = 0; i < x.vers.length; i++) d += Math.round((x.de[i] + (x.vers[i] - x.de[i]) * e) * 10) / 10 + x.morceaux[i + 1];
+        x.p.setAttribute('d', d);
+      });
+      if (k < 1) c._morph = requestAnimationFrame(pas); else c._morph = 0;
+    }
+    c._morph = requestAnimationFrame(pas);
+  }
+
+  /* ===================================================================
+     Plancher légal atteint : un retour visuel bref et motivé
+     =================================================================== */
+  function celebrerPlancher(sim) {
+    var atteint = sim.tauxReduction >= 54.95;
+    if (atteint && ui.plancherAtteint === false) {
+      var g = $('gauge-fg').closest('.kpi') || $('gauge-fg').parentNode;
+      g.classList.remove('celebre'); void g.offsetWidth; g.classList.add('celebre');
+      setTimeout(function () { g.classList.remove('celebre'); }, 1200);
+      vibrer([12, 50, 12]);
+    }
+    ui.plancherAtteint = atteint;
+  }
+
+  /* ===================================================================
+     Comparer des scénarios du même client
+     =================================================================== */
+  var Comp = window.Comparateur;
+  var NOMS_VARIANTES = { optimal: 'Montant optimal', avSeule: 'Tout en assurance vie', moitie: 'Moitié en CEA', plus100: '100 TND de plus par mois' };
+  ui.scenarios = lireLocal('scenarios', []).filter(function (x) { return x && x.etat; }).slice(0, Comp.MAX);
+  function ajouterScenario(nom, etat) {
+    var s = JSON.stringify(etat);
+    if (ui.scenarios.some(function (x) { return JSON.stringify(x.etat) === s; })) { toast(t('Ce scénario figure déjà dans la comparaison.'), 'erreur'); return; }
+    if (ui.scenarios.length >= Comp.MAX) { toast(t('{0} scénarios au plus : retirez-en un pour en ajouter.', [Comp.MAX]), 'erreur'); return; }
+    ui.scenarios.push({ nom: nom, etat: etat });
+    ecrireLocal('scenarios', ui.scenarios);
+    afficherScenarios();
+    toast(t('Scénario ajouté : {0}.', [nom]));
+  }
+  function nomScenario(x) { return x.cle ? t(NOMS_VARIANTES[x.cle]) : x.nom; }
+  function afficherScenarios() {
+    var zone = $('scn-zone'), l = ui.scenarios;
+    $('scn-vide').hidden = l.length > 0;
+    zone.hidden = !l.length;
+    if (!l.length) { zone.innerHTML = ''; planifierNav(); return; }
+    var m = l.map(function (x) { return Comp.mesurer(x.etat); });
+    var b = Comp.meilleurs(m);
+    function etoile(cle, i) { return b[cle] === i ? '<span class="etoile" aria-label="' + echapper(t('Meilleure valeur')) + '">★</span> ' : ''; }
+    var lignes = [
+      [t('Revenu brut annuel imposable'), function (x, i) { return fmtTND(l[i].etat.revenu); }, null],
+      [t('Assurance vie'), function (x) { return fmtTND(x.versementAv) + ' <small>' + echapper(t(PERIODES[x.frequence])) + '</small>'; }, null],
+      [t('CEA'), function (x) { return fmtTND(x.versementCea) + ' <small>' + echapper(t(PERIODES[x.frequence])) + '</small>'; }, null],
+      [t('Économie d\'impôt par an'), function (x) { return fmtTND(x.economie); }, 'economie'],
+      [t('Impôt total après investissement'), function (x) { return fmtTND(x.impotApres); }, 'impotApres'],
+      [t('Effort d\'épargne réel par mois'), function (x) { return fmtTND(x.effortMensuel); }, 'effortMensuel'],
+      [t('Capital au terme (médian)'), function (x) { return x.capital == null ? '—' : fmtTND(x.capital) + ' <small>' + echapper(t('{0} ans', [x.duree])) + '</small>'; }, 'capital'],
+      [t('Valeur totale au terme'), function (x) { return x.valeur == null ? '—' : fmtTND(x.valeur); }, 'valeur'],
+      [t('Rendement effectif'), function (x) { return x.rendement == null ? '—' : fmtPct(x.rendement); }, 'rendement']
+    ];
+    zone.innerHTML = '<table class="tranches scenarios"><thead><tr><th scope="col"><span class="sr-only">' + echapper(t('Critère')) + '</span></th>' +
+      l.map(function (x, i) {
+        return '<th scope="col"><span class="scn-nom">' + echapper(nomScenario(x)) + '</span><span class="scn-btns">' +
+          '<button type="button" class="lien-btn" data-scn-appliquer="' + i + '">' + echapper(t('Appliquer')) + '</button>' +
+          '<button type="button" class="scn-retirer" data-scn-retirer="' + i + '" aria-label="' + echapper(t('Retirer {0}', [nomScenario(x)])) + '" title="' + echapper(t('Retirer')) + '"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-x"/></svg></button></span></th>';
+      }).join('') + '</tr></thead><tbody>' +
+      lignes.map(function (lg) {
+        return '<tr><th scope="row">' + echapper(lg[0]) + '</th>' + m.map(function (x, i) {
+          return '<td' + (lg[2] && b[lg[2]] === i ? ' class="meilleur"' : '') + '>' + (lg[2] ? etoile(lg[2], i) : '') + lg[1](x, i) + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody></table>';
+    planifierNav();
+  }
+  $('scn-ajouter').addEventListener('click', function () {
+    actualiser();
+    ajouterScenario(ui.scenarios.length ? t('Simulation {0}', [ui.scenarios.length + 1]) : t('Simulation actuelle'), lireEtat());
+  });
+  $('carte-scenarios').addEventListener('click', function (e) {
+    var v = e.target.closest('[data-variante]');
+    if (v) {
+      actualiser();
+      var x = Comp.variantes(lireEtat()).filter(function (z) { return z.cle === v.dataset.variante; })[0];
+      if (!x) { toast(t('Indiquez d\'abord un versement en assurance vie ou en CEA.'), 'erreur'); return; }
+      var avant = ui.scenarios.length;
+      ajouterScenario(t(NOMS_VARIANTES[x.cle]), x.etat);
+      if (ui.scenarios.length > avant) { ui.scenarios[ui.scenarios.length - 1].cle = x.cle; ecrireLocal('scenarios', ui.scenarios); afficherScenarios(); }
+      return;
+    }
+    var a = e.target.closest('[data-scn-appliquer]');
+    if (a) { var s = ui.scenarios[+a.dataset.scnAppliquer]; if (s) { appliquerEtat(s.etat); toast(t('Scénario appliqué : {0}.', [nomScenario(s)])); } return; }
+    var r = e.target.closest('[data-scn-retirer]');
+    if (r) {
+      var i = +r.dataset.scnRetirer, retire = ui.scenarios.splice(i, 1)[0];
+      ecrireLocal('scenarios', ui.scenarios);
+      afficherScenarios();
+      toast(t('Scénario retiré.'), null, { libelle: t('Annuler'), executer: function () { ui.scenarios.splice(i, 0, retire); ecrireLocal('scenarios', ui.scenarios); afficherScenarios(); } });
+    }
+  });
+
+  /* ===================================================================
+     Simulation du couple
+     =================================================================== */
+  ui.coupleChef = 1;
+  brancherSegments('cp-chef', function (v) { ui.coupleChef = +v; majCouple(); });
+  function majCouple() {
+    var calc = ui.calc, res = $('couple-res');
+    ui.couple = null;
+    $('cp-err').textContent = '';
+    if (!calc || !(calc.etat.revenu > 0)) { res.hidden = true; return; }
+    var r2 = lire('cp-revenu'), b = lire('cp-budget');
+    $('cp-budget').placeholder = fmtLibre(Math.round(calc.investissementAv)) + '…';
+    if (r2.vide) { res.hidden = false; res.innerHTML = '<p class="hint-bloc">' + echapper(t('Indiquez le revenu de votre conjoint pour comparer les répartitions.')) + '</p>'; return; }
+    if (!isFinite(r2.v) || r2.v < 0 || (!b.vide && !(isFinite(b.v) && b.v >= 0))) { res.hidden = true; $('cp-err').textContent = t('Saisissez un montant valide (ex. 500).'); return; }
+    var budget = b.vide ? calc.investissementAv : b.v;
+    var e = calc.etat;
+    var r = window.Couple.repartir({ revenu1: e.revenu, revenu2: r2.v, chef: ui.coupleChef, enfants: e.enfants, infirmes: e.infirmes, etudiants: e.etudiants, parents: e.parents,
+      budget: budget, cea1: calc.investissementCea, cea2: 0 }, e.annee);
+    if (!r) { res.hidden = true; return; }
+    ui.couple = r;
+    res.hidden = false;
+    function tuile(titre, part, eco, avant, apres) {
+      return '<div class="cp-tuile"><span class="cp-qui">' + echapper(titre) + '</span><b>' + bidi(fmtTND(part)) + '</b><span>' + bidi(echapper(t('par an, soit {0} par mois', [fmtTND(part / 12)]))) + '</span>' +
+        '<span class="cp-eco">' + bidi(echapper(t('Économie {0}', [fmtTND(eco)]))) + '</span><span class="cp-impot">' + bidi(echapper(t('Impôt {0} → {1}', [fmtTND(avant), fmtTND(apres)]))) + '</span></div>';
+    }
+    res.innerHTML = '<div class="cp-tuiles">' + tuile(t('Vous'), r.part1, r.economie1, r.impotAvant1, r.impot1) + tuile(t('Votre conjoint'), r.part2, r.economie2, r.impotAvant2, r.impot2) + '</div>' +
+      '<p class="cp-total"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg><span>' + bidi(echapper(t('Économie du foyer : {0} par an.', [fmtTND(r.total)]))) +
+      (r.gainVsEgalitaire > 0.5 ? ' ' + bidi(echapper(t('C\'est {0} de plus qu\'un partage moitié-moitié.', [fmtTND(r.gainVsEgalitaire)]))) : '') + '</span></p>' +
+      '<button type="button" class="btn btn-ghost btn-sm" id="cp-appliquer"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg>' + echapper(t('Appliquer votre part à la simulation')) + '</button>';
+    planifierNav();
+  }
+  ['cp-revenu', 'cp-budget'].forEach(function (id) {
+    $(id).addEventListener('input', majCouple);
+    $(id).addEventListener('blur', function () { var r = Saisie.lireNombre(this.value); if (!r.vide && isFinite(r.v) && !r.ambigu) this.value = fmtLibre(r.v); });
+  });
+  $('couple-res').addEventListener('click', function (e) {
+    if (!e.target.closest('#cp-appliquer') || !ui.couple) return;
+    var c = ui.calc, fixe = Math.max(0, c.investissementAv - c.etat.versement * c.facteur);
+    appliquerMontantPeriode(Math.max(0, Math.round((ui.couple.part1 - fixe) / c.facteur * 1000) / 1000));
+  });
+
+  /* ===================================================================
+     Tests de résistance
+     =================================================================== */
+  function majStress(calc) {
+    var zone = $('stress-liste');
+    ui.stress = null;
+    if (!calc.actif) { zone.innerHTML = ''; return; }
+    var n = calc.etat.dureeAns;
+    ['st-krach', 'st-pause', 'st-duree'].forEach(function (id) { $(id).max = String(n); });
+    var v = { anneeKrach: lire('st-krach').v, chuteCeaPct: lire('st-chute').v, debutPause: lire('st-pause').v, dureePause: lire('st-duree').v, baissePts: lire('st-baisse').v, inflationPct: lire('st-inflation').v };
+    var ok = Object.keys(v).every(function (k) { return isFinite(v[k]) && v[k] >= 0; });
+    $('st-err').textContent = ok ? '' : t('Saisissez des valeurs positives.');
+    if (!ok) { zone.innerHTML = ''; return; }
+    var r = window.Stress.tester(calc, v);
+    ui.stress = r;
+    var o = r.options;
+    var D = {
+      krach: ['i-eclair', t('Krach boursier l\'année {0}', [o.anneeKrach]), t('Le CEA perd {0} et l\'assurance vie ne sert que son taux garanti cette année-là.', [fmtPct(o.chuteCeaPct)])],
+      pause: ['i-minus', t('Pause des versements'), ''],
+      baisse: ['i-chart', t('Rendements plus bas'), t('Rendements réduits de {0} points chaque année (assurance vie jamais sous le garanti).', [fmtLibre(o.baissePts)])],
+      inflation: ['i-percent', t('Inflation élevée'), '']
+    };
+    zone.innerHTML = r.tests.map(function (x) {
+      var d = D[x.cle], desc = d[2];
+      if (x.cle === 'pause') desc = t('Aucun versement pendant {0} an(s) à partir de l\'année {1} : {2} non versés et {3} d\'économie d\'impôt perdue.', [o.dureePause, o.debutPause, fmtTND(x.versementsManques), fmtTND(x.economiePerdue)]);
+      if (x.cle === 'inflation') desc = t('Avec {0} d\'inflation par an, le capital vaut {1} en dinars d\'aujourd\'hui ({2} de son montant).', [fmtPct(o.inflationPct), fmtTND(x.capitalReel), fmtPct(x.pouvoirAchatPct)]);
+      var montant = x.cle === 'inflation' ? x.capitalReel : x.capital;
+      var ratio = r.base.capital > 0 ? Math.max(0, Math.min(1, montant / r.base.capital)) : 0;
+      var ecart = x.cle === 'inflation' ? x.capitalReel - r.base.capital : x.ecart;
+      return '<div class="st-ligne"><span class="st-ico" aria-hidden="true"><svg class="ico ico-sm"><use href="#' + d[0] + '"/></svg></span>' +
+        '<div class="st-txt"><b>' + bidi(echapper(d[1])) + '</b><span>' + bidi(echapper(desc)) + '</span>' +
+        '<span class="st-barre" aria-hidden="true"><i style="--r:' + ratio.toFixed(4) + '"></i></span></div>' +
+        '<div class="st-val"><b>' + bidi(fmtTND(montant)) + '</b><span class="' + (ecart < -0.5 ? 'perte' : '') + '">' + bidi(fmtSigne(ecart)) + '</span></div></div>';
+    }).join('') + '<p class="st-base">' + bidi(echapper(t('Référence : capital médian de {0} au terme.', [fmtTND(r.base.capital)]))) + '</p>';
+  }
+  ['st-krach', 'st-chute', 'st-pause', 'st-duree', 'st-baisse', 'st-inflation'].forEach(function (id) { $(id).addEventListener('input', function () { if (ui.calc) { majStress(ui.calc); planifierNav(); } }); });
+
+  /* ===================================================================
+     Objectifs de vie
+     =================================================================== */
+  var MODELES_OBJ = {
+    retraite: function () { return { nom: t('Retraite'), montant: 200000, ans: ui.retraite ? Math.max(1, ui.retraite.depart - ui.retraite.age) : 20, deja: 0 }; },
+    etudes: function () { return { nom: t('Études des enfants'), montant: 60000, ans: 12, deja: 0 }; },
+    logement: function () { return { nom: t('Achat immobilier'), montant: 100000, ans: 7, deja: 0 }; },
+    libre: function () { return { nom: t('Autre projet'), montant: 20000, ans: 5, deja: 0 }; }
+  };
+  ui.objectifs = lireLocal('objectifs', []).filter(function (o) { return o && typeof o === 'object'; }).slice(0, 5);
+  function construireObjectifs() {
+    var liste = $('obj-liste');
+    liste.innerHTML = ui.objectifs.map(function (o, i) {
+      var id = 'obj' + i;
+      return '<div class="obj-ligne" data-i="' + i + '">' +
+        '<div class="obj-champs">' +
+        '<div class="field obj-nom"><label class="sr-only" for="' + id + '-nom">' + echapper(t('Nom du projet')) + '</label><input id="' + id + '-nom" name="' + id + '-nom" class="obj-titre" type="text" maxlength="40" autocomplete="off" data-cle="nom" value="' + echapper(o.nom || '') + '"></div>' +
+        '<div class="field"><div class="field-top"><label for="' + id + '-montant">' + echapper(t('Montant visé')) + '</label></div><div class="input-wrap"><input id="' + id + '-montant" name="' + id + '-montant" type="text" inputmode="decimal" autocomplete="off" data-cle="montant" value="' + echapper(fmtLibre(o.montant || 0)) + '"><span class="suffix" translate="no">TND</span></div></div>' +
+        '<div class="field"><div class="field-top"><label for="' + id + '-ans">' + echapper(t('Dans')) + '</label></div><div class="input-wrap"><input id="' + id + '-ans" name="' + id + '-ans" type="text" inputmode="numeric" autocomplete="off" data-cle="ans" value="' + echapper(o.ans) + '"><span class="suffix">' + echapper(t('ans')) + '</span></div></div>' +
+        '<div class="field"><div class="field-top"><label for="' + id + '-deja">' + echapper(t('Déjà épargné')) + '</label></div><div class="input-wrap"><input id="' + id + '-deja" name="' + id + '-deja" type="text" inputmode="decimal" autocomplete="off" data-cle="deja" value="' + echapper(o.deja ? fmtLibre(o.deja) : '') + '" placeholder="0"><span class="suffix" translate="no">TND</span></div></div>' +
+        '</div><button type="button" class="obj-suppr" data-obj-suppr="' + i + '" aria-label="' + echapper(t('Retirer ce projet')) + '" title="' + echapper(t('Retirer ce projet')) + '"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-trash"/></svg></button>' +
+        '<div class="obj-res" id="' + id + '-res"></div></div>';
+    }).join('');
+    $('obj-vide').hidden = ui.objectifs.length > 0;
+    Array.prototype.forEach.call(document.querySelectorAll('.obj-modeles .puce'), function (b) { b.disabled = ui.objectifs.length >= 5; });
+    majObjectifs();
+  }
+  function majObjectifs() {
+    var calc = ui.calc, bilan = $('obj-bilan');
+    if (!calc || !ui.objectifs.length) { bilan.hidden = true; return; }
+    var e = calc.etat;
+    var taux = Math.max(0, e.rendementPct - e.fraisPct);
+    var dispo = (e.versement + e.versementCea) * calc.facteur / 12;
+    var p = window.Objectifs.planifier(ui.objectifs, taux, dispo);
+    ui.planObjectifs = p;
+    p.objectifs.forEach(function (o, i) {
+      var el = $('obj' + i + '-res');
+      if (!el) return;
+      if (!o.valide) { el.innerHTML = '<span class="ko">' + echapper(t('Indiquez un montant positif et une échéance entre 1 et 50 ans.')) + '</span>'; return; }
+      el.innerHTML = '<span class="obj-besoin">' + bidi(echapper(t('{0} par mois nécessaires', [fmtTND(o.mensuel)]))) + '</span>' +
+        '<span class="obj-jauge" role="img" aria-label="' + echapper(t('Financé à {0}', [fmtPct(o.couverture)])) + '"><i class="' + (o.atteint ? 'ok' : '') + '" style="--r:' + (Math.min(100, o.couverture) / 100).toFixed(4) + '"></i></span>' +
+        '<span class="obj-cour ' + (o.atteint ? 'ok' : '') + '">' + bidi(echapper(o.atteint ? t('Financé') : t('Financé à {0}', [fmtPct(o.couverture)]))) + '</span>';
+    });
+    bilan.hidden = false;
+    bilan.innerHTML = '<div class="obj-chiffres"><div><span>' + echapper(t('Besoin total par mois')) + '</span><b>' + bidi(fmtTND(p.besoin)) + '</b></div>' +
+      '<div><span>' + echapper(t('Votre épargne actuelle par mois')) + '</span><b>' + bidi(fmtTND(p.disponible)) + '</b></div></div>' +
+      (p.manque > 0.5 ? '<p class="obj-msg manque">' + bidi(echapper(t('Il manque {0} par mois pour financer tous vos projets au rendement net de {1}.', [fmtTND(p.manque), fmtPct(taux)]))) + '</p>' +
+        '<button type="button" class="btn btn-ghost btn-sm" id="obj-ajuster"><svg class="ico ico-sm" aria-hidden="true"><use href="#i-check"/></svg>' + bidi(echapper(t('Ajouter {0} par mois à l\'assurance vie', [fmtTND(p.manque)]))) + '</button>'
+        : '<p class="obj-msg ok">' + bidi(echapper(t('Votre épargne actuelle finance tous vos projets, avec {0} de marge par mois.', [fmtTND(p.surplus)]))) + '</p>');
+    planifierNav();
+  }
+  function sauverObjectifs() { ecrireLocal('objectifs', ui.objectifs); }
+  $('carte-objectifs').addEventListener('click', function (e) {
+    var m = e.target.closest('[data-modele]');
+    if (m && ui.objectifs.length < 5) {
+      ui.objectifs.push(MODELES_OBJ[m.dataset.modele]());
+      sauverObjectifs();
+      construireObjectifs();
+      var champs = $('obj-liste').querySelectorAll('.obj-ligne');
+      var der = champs[champs.length - 1];
+      if (der) der.querySelector('[data-cle="montant"]').focus();
+      return;
+    }
+    var s = e.target.closest('[data-obj-suppr]');
+    if (s) {
+      var i = +s.dataset.objSuppr, retire = ui.objectifs.splice(i, 1)[0];
+      sauverObjectifs();
+      construireObjectifs();
+      toast(t('Projet retiré.'), null, { libelle: t('Annuler'), executer: function () { ui.objectifs.splice(i, 0, retire); sauverObjectifs(); construireObjectifs(); } });
+      return;
+    }
+    if (e.target.closest('#obj-ajuster') && ui.planObjectifs) {
+      var c = ui.calc;
+      appliquerMontantPeriode(Math.round((c.etat.versement + ui.planObjectifs.manque * 12 / c.facteur) * 1000) / 1000);
+    }
+  });
+  $('obj-liste').addEventListener('input', function (e) {
+    var l = e.target.closest('.obj-ligne'), cle = e.target.dataset.cle;
+    if (!l || !cle) return;
+    var o = ui.objectifs[+l.dataset.i];
+    if (cle === 'nom') o.nom = e.target.value.trim();
+    else { var r = Saisie.lireNombre(e.target.value); o[cle] = r.vide ? 0 : r.v; }
+    sauverObjectifs();
+    majObjectifs();
+  });
+  $('obj-liste').addEventListener('focusout', function (e) {
+    var cle = e.target.dataset && e.target.dataset.cle;
+    if (cle !== 'montant' && cle !== 'deja') return;
+    var r = Saisie.lireNombre(e.target.value);
+    if (!r.vide && isFinite(r.v) && !r.ambigu) e.target.value = fmtLibre(r.v);
+  });
+
+  /* ===================================================================
+     Verrouillage de la saisie (présentation au client)
+     =================================================================== */
+  function verrouiller(actif) {
+    var z = $('zone-saisie');
+    if ('inert' in z) z.inert = actif; else if (actif) z.setAttribute('inert', ''); else z.removeAttribute('inert');
+    z.classList.toggle('verrouillee', actif);
+    $('bandeau-verrou').hidden = !actif;
+    $('verrou').setAttribute('aria-pressed', String(actif));
+    ui.verrouille = actif;
+  }
+  $('verrou').addEventListener('click', function () {
+    verrouiller(!ui.verrouille);
+    toast(ui.verrouille ? t('Saisie verrouillée : les montants ne peuvent plus être modifiés par erreur.') : t('Saisie déverrouillée.'));
+  });
+  $('deverrouiller').addEventListener('click', function () { verrouiller(false); $('verrou').focus(); });
+
+  /* ===================================================================
+     Second écran : la présentation s'affiche dans une autre fenêtre
+     (écran tourné vers le client), cette fenêtre-ci sert de télécommande
+     =================================================================== */
+  var CANAL = 'simulateur-presentation';
+  var ecranClient = new URLSearchParams(location.search).get('ecran') === 'client';
+  function envoyerDiapo() {
+    if (!pres.canal || !pres.liste) return;
+    var s = pres.liste[pres.i];
+    pres.canal.postMessage({ type: 'diapo', sur: s.sur, titre: s.titre, corps: s.corps, i: pres.i, n: pres.liste.length, agence: $('pr-agence').textContent, langue: I18n.langue() });
+  }
+  $('pr-ecran').addEventListener('click', function () {
+    if (!window.BroadcastChannel) { toast(t('Second écran indisponible dans ce navigateur.'), 'erreur'); return; }
+    if (!pres.canal) {
+      pres.canal = new BroadcastChannel(CANAL);
+      pres.canal.onmessage = function (m) {
+        if (m.data && m.data.type === 'pret') { envoyerDiapo(); $('pr-etat').hidden = false; $('pr-etat').textContent = t('Écran client connecté'); }
+        if (m.data && m.data.type === 'ferme') { $('pr-etat').hidden = true; }
+      };
+    }
+    /* Cette fenêtre devient la télécommande : elle quitte le plein écran sans fermer la présentation */
+    pres.telecommande = true;
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {}); } catch (e) {}
+    var f = window.open(location.pathname + '?ecran=client', 'ecran-client', 'popup=yes,width=1280,height=800');
+    if (!f) { toast(t('Autorisez les fenêtres surgissantes pour ouvrir le second écran.'), 'erreur'); return; }
+    if (!ui.verrouille) verrouiller(true);
+    toast(t('Faites glisser la nouvelle fenêtre sur l\'écran du client, puis passez-la en plein écran.'));
+  });
+  function demarrerEcranClient() {
+    document.documentElement.classList.add('ecran-client');
+    var p = $('presentation');
+    p.hidden = false;
+    document.body.classList.add('presentation-ouverte');
+    $('pr-diapo').innerHTML = '<p class="pr-sur">' + echapper(t('Second écran')) + '</p><h2 class="pr-titre">' + echapper(t('En attente de la présentation…')) + '</h2>';
+    $('pr-plein').hidden = !p.requestFullscreen;
+    $('pr-plein').addEventListener('click', function () { try { p.requestFullscreen().catch(function () {}); } catch (e) {} });
+    document.addEventListener('fullscreenchange', function () { $('pr-plein').hidden = !!document.fullscreenElement; });
+    if (!window.BroadcastChannel) return;
+    var c = new BroadcastChannel(CANAL);
+    c.onmessage = function (m) {
+      var d = m.data || {};
+      if (d.type === 'diapo') {
+        if (d.langue && d.langue !== I18n.langue()) appliquerLangue(d.langue, true);
+        $('pr-agence').textContent = d.agence;
+        var el = $('pr-diapo');
+        var sens = pres.i == null || d.i === pres.i ? '' : d.i > pres.i ? ' suiv' : ' prec';
+        pres.i = d.i;
+        el.className = 'pr-diapo' + sens;
+        el.innerHTML = '<p class="pr-sur">' + echapper(d.sur) + '</p><h2 class="pr-titre">' + echapper(d.titre) + '</h2>' + d.corps;
+        $('pr-points').innerHTML = Array.apply(null, Array(d.n)).map(function (x, k) { return '<span class="pr-point' + (k === d.i ? ' actif' : '') + '"></span>'; }).join('');
+        animerTrace(el.querySelector('.pr-graphe'));
+      }
+      if (d.type === 'fin') {
+        $('pr-diapo').className = 'pr-diapo';
+        $('pr-diapo').innerHTML = '<p class="pr-sur">' + echapper(t('Second écran')) + '</p><h2 class="pr-titre">' + echapper(t('Merci de votre attention')) + '</h2>';
+        $('pr-points').innerHTML = '';
+      }
+    };
+    c.postMessage({ type: 'pret' });
+    window.addEventListener('beforeunload', function () { c.postMessage({ type: 'ferme' }); });
+  }
+
+  /* ===================================================================
+     Reçu fiscal partageable (image PNG dessinée sur canvas)
+     =================================================================== */
+  function couleursRecu() {
+    var pal = agence.couleur ? Theme.palette(agence.couleur) : null;
+    return pal ? [pal.principale, pal.secondaire, pal.tertiaire] : ['#4f46e5', '#7c3aed', '#c026d3'];
+  }
+  function dessinerRecu(cv) {
+    var calc = ui.calc, sim = calc.sim, e = calc.etat;
+    var W = cv.width, H = cv.height, x = cv.getContext('2d');
+    var rtl = I18n.langue() === 'ar';
+    var col = couleursRecu();
+    var POL = rtl ? '"Segoe UI", Tahoma, "Noto Sans Arabic", sans-serif' : 'Inter, system-ui, sans-serif';
+    var DISP = rtl ? POL : '"Plus Jakarta Sans", Inter, system-ui, sans-serif';
+    x.direction = rtl ? 'rtl' : 'ltr';
+    /* En arabe, chaque montant est isolé de gauche à droite (marques LRI … PDI) */
+    function M(v) { return rtl ? '\u2066' + fmtTND(v) + '\u2069' : fmtTND(v); }
+    function MP(v) { return rtl ? '\u2066' + fmtPct(v) + '\u2069' : fmtPct(v); }
+    function ecrire(s, px, py, taille, poids, coul, align, police) {
+      x.font = (poids || 400) + ' ' + taille + 'px ' + (police || POL);
+      x.fillStyle = coul || '#121631';
+      var a = align || 'start';
+      if (rtl) { px = W - px; a = a === 'start' ? 'right' : a === 'end' ? 'left' : a; } else a = a === 'start' ? 'left' : a === 'end' ? 'right' : a;
+      x.textAlign = a;
+      x.fillText(s, px, py);
+    }
+    /* Fond */
+    var g = x.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, col[0]); g.addColorStop(0.55, col[1]); g.addColorStop(1, col[2]);
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+    x.fillStyle = 'rgba(255,255,255,0.08)';
+    for (var px = 30; px < W; px += 36) for (var py = 30; py < H; py += 36) { x.beginPath(); x.arc(px, py, 1.6, 0, Math.PI * 2); x.fill(); }
+    /* Ticket avec bords dentelés */
+    var L = 96, R = W - 96, T = 120, B = H - 120, dent = 18;
+    x.save();
+    x.shadowColor = 'rgba(11, 10, 30, 0.35)'; x.shadowBlur = 40; x.shadowOffsetY = 18;
+    x.beginPath();
+    x.moveTo(L, T + dent);
+    for (var k = L; k < R; k += dent * 2) { x.lineTo(k + dent, T); x.lineTo(Math.min(k + dent * 2, R), T + dent); }
+    x.lineTo(R, B - dent);
+    for (var k2 = R; k2 > L; k2 -= dent * 2) { x.lineTo(k2 - dent, B); x.lineTo(Math.max(k2 - dent * 2, L), B - dent); }
+    x.closePath();
+    x.fillStyle = '#ffffff'; x.fill();
+    x.restore();
+    var gx = L + 64, dx = R - 64, y = T + 96;
+    /* En-tête : pastille et titre */
+    var cx = rtl ? W - gx - 34 : gx + 34;
+    var gp = x.createLinearGradient(cx - 34, y - 60, cx + 34, y + 8);
+    gp.addColorStop(0, col[0]); gp.addColorStop(1, col[2]);
+    x.fillStyle = gp; x.beginPath(); x.arc(cx, y - 26, 34, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#fff'; x.lineWidth = 5; x.lineJoin = 'round'; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(cx, y - 46); x.lineTo(cx + 16, y - 39); x.lineTo(cx + 16, y - 26); x.quadraticCurveTo(cx + 16, y - 12, cx, y - 6); x.quadraticCurveTo(cx - 16, y - 12, cx - 16, y - 26); x.lineTo(cx - 16, y - 39); x.closePath(); x.stroke();
+    x.beginPath(); x.moveTo(cx - 7, y - 26); x.lineTo(cx - 1, y - 20); x.lineTo(cx + 8, y - 31); x.stroke();
+    var a = coordonneesAgence();
+    ecrire(t('Reçu fiscal'), gx + 90, y - 34, 40, 800, '#121631', 'start', DISP);
+    ecrire(a.nom || t('Assurance vie et CEA'), gx + 90, y + 4, 26, 500, '#676d8c');
+    ecrire(new Date().toLocaleDateString(I18n.locale(), { day: 'numeric', month: 'short', year: 'numeric' }), dx, y - 34, 26, 600, '#676d8c', 'end');
+    function pointilles(yy) {
+      x.save(); x.setLineDash([10, 10]); x.strokeStyle = '#cdd3e4'; x.lineWidth = 3;
+      x.beginPath(); x.moveTo(gx, yy); x.lineTo(dx, yy); x.stroke(); x.restore();
+    }
+    y += 54; pointilles(y);
+    /* Montant principal */
+    y += 78;
+    ecrire(t('Mon économie d\'impôt'), gx, y, 30, 600, '#363c5c');
+    y += 118;
+    ecrire(rtl ? '\u2066' + fmtAmount(sim.economie) + '\u2069' : fmtAmount(sim.economie), gx, y, 112, 800, col[0], 'start', DISP);
+    x.font = '800 112px ' + DISP;
+    var lg = x.measureText(fmtAmount(sim.economie)).width;
+    ecrire(rtl ? t('par an') + ' TND' : 'TND ' + t('par an'), gx + lg + 22, y, 34, 700, '#676d8c');
+    y += 56;
+    ecrire(t('soit {0} par mois · {1} de réduction', [M(sim.economie / 12), MP(sim.tauxReduction)]), gx, y, 28, 500, '#363c5c');
+    /* Barres impôt avant / après */
+    y += 60;
+    var larg = dx - gx;
+    function barre(lib, val, part, coul) {
+      ecrire(lib, gx, y, 24, 600, '#676d8c');
+      ecrire(M(val), dx, y, 24, 700, '#121631', 'end');
+      y += 16;
+      x.fillStyle = '#eef0fb'; arrondi(gx, y, larg, 18); x.fill();
+      x.fillStyle = coul; arrondi(rtl ? gx + larg * (1 - part) : gx, y, Math.max(18, larg * part), 18); x.fill();
+      y += 56;
+    }
+    function arrondi(px, py, w, h) { var r = h / 2; x.beginPath(); x.moveTo(px + r, py); x.arcTo(px + w, py, px + w, py + h, r); x.arcTo(px + w, py + h, px, py + h, r); x.arcTo(px, py + h, px, py, r); x.arcTo(px, py, px + w, py, r); x.closePath(); }
+    barre(t('Impôt total avant investissement'), sim.impotAvant, 1, '#cbd5e1');
+    barre(t('Impôt total après investissement'), sim.impotApres, sim.impotAvant > 0 ? sim.impotApres / sim.impotAvant : 0, '#10b981');
+    pointilles(y - 14);
+    y += 40;
+    /* Lignes du reçu */
+    var lignes = [[t('Assurance vie par an'), M(calc.investissementAv)]];
+    if (calc.investissementCea > 0) lignes.push([t('CEA par an'), M(calc.investissementCea)]);
+    lignes.push([t('Effort d\'épargne réel par mois'), M(Math.max(0, calc.investissement - sim.economie) / 12)]);
+    if (calc.actif) lignes.push([t('Capital au terme (médian) · {0} ans', [e.dureeAns]), M(ui.mc ? ui.mc.finalP50 : calc.med.capitalFinal)]);
+    lignes.forEach(function (l) {
+      ecrire(l[0], gx, y, 27, 500, '#363c5c');
+      ecrire(l[1], dx, y, 27, 700, '#121631', 'end');
+      y += 52;
+    });
+    /* QR code de l'application (aucune donnée personnelle) */
+    var qy = B - 230;
+    pointilles(qy - 30);
+    var qr = matriceQR(urlApplication().split('#')[0].split('?')[0]);
+    var taille = 150, qx = rtl ? W - gx - taille : gx;
+    if (qr) {
+      var n = qr.getModuleCount(), cote = taille / n;
+      x.fillStyle = '#121631';
+      for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (qr.isDark(r, c)) x.fillRect(qx + c * cote, qy + r * cote, cote + 0.4, cote + 0.4);
+    }
+    ecrire(t('Faites votre simulation'), gx + taille + 32, qy + 50, 30, 800, '#121631', 'start', DISP);
+    ecrire(location.host || 'simulateur', gx + taille + 32, qy + 92, 24, 600, col[0]);
+    ecrire(t('Simulation indicative, non contractuelle'), gx + taille + 32, qy + 132, 21, 500, '#676d8c');
+    ecrire(t('Simulateur Assurance Vie & CEA'), W / 2, H - 52, 26, 700, 'rgba(255,255,255,0.92)', 'center', DISP);
+  }
+  function ouvrirRecu() {
+    actualiser();
+    if (!ui.calc || !(ui.calc.etat.revenu > 0)) { toast(t('Saisissez d\'abord votre revenu brut annuel imposable.'), 'erreur'); return; }
+    if (ui.calc.actif) calculerMonteCarlo(ui.calc);
+    var d = $('recu'), cv = $('recu-canvas');
+    var pret = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+    pret.then(function () {
+      dessinerRecu(cv);
+      cv.classList.remove('imprime'); void cv.offsetWidth; cv.classList.add('imprime');
+      if (typeof d.showModal === 'function') { if (!d.open) d.showModal(); } else d.setAttribute('open', '');
+    });
+    $('recu-partager').hidden = !(navigator.canShare && window.File && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] }));
+  }
+  function blobRecu() { return new Promise(function (ok) { $('recu-canvas').toBlob(ok, 'image/png'); }); }
+  $('ouvrir-recu').addEventListener('click', ouvrirRecu);
+  $('recu-fermer').addEventListener('click', function () { $('recu').close(); });
+  $('recu-telecharger').addEventListener('click', function () {
+    blobRecu().then(function (b) { telecharger('recu-fiscal-' + dateIso() + '.png', b, 'image/png'); toast(t('Image téléchargée.')); });
+  });
+  $('recu-partager').addEventListener('click', function () {
+    blobRecu().then(function (b) {
+      return navigator.share({ files: [new File([b], 'recu-fiscal.png', { type: 'image/png' })], title: t('Reçu fiscal'), text: t('Mon économie d\'impôt avec l\'assurance vie : {0} par an.', [fmtTND(ui.calc.sim.economie)]) });
+    }).catch(function (e) { if (!e || e.name !== 'AbortError') toast(t('Partage impossible : téléchargez l\'image.'), 'erreur'); });
+  });
+
+  /* ===================================================================
+     Classeur Excel (.xlsx) : synthèse, tranches, projection, Monte-Carlo, stratégie, scénarios, objectifs
+     =================================================================== */
+  function exporterXlsx() {
+    actualiser();
+    var calc = ui.calc;
+    if (!calc || !(calc.etat.revenu > 0)) { toast(t('Saisissez d\'abord votre revenu brut annuel imposable.'), 'erreur'); return; }
+    var sim = calc.sim, e = calc.etat;
+    var T = function (v) { return { v: Math.round(v * 1000) / 1000, s: 'tnd' }; };
+    var P = function (v) { return v == null ? '—' : { v: v / 100, s: 'pct' }; };
+    var G = function (v) { return { v: v, s: 'gras' }; };
+    var feuilles = [];
+    var syn = [[{ v: t('Simulation d\'assurance vie et de CEA'), s: 'titre' }], [t('Édité le {0}', [new Date().toLocaleDateString(I18n.locale())]), t('Barème : {0}', [libelleBareme()])], [],
+      [G(t('Hypothèses')), G('')],
+      [t('Revenu brut annuel imposable'), T(e.revenu)],
+      [t('Situation familiale'), (e.chef ? t('Chef de famille') : t('Non chef de famille')) + ' · ' + t('{0} enfant(s), {1} infirme(s), {2} étudiant(s), {3} parent(s)', [e.enfants, e.infirmes, e.etudiants, e.parents])],
+      [t('Versement assurance vie {0}', [t(PERIODES[e.frequence])]), T(e.versement)],
+      [t('Versement CEA {0}', [t(PERIODES[e.frequence])]), T(e.versementCea)],
+      [t('Assurance vie') + ' · ' + t('la 1re année'), T(calc.investissementAv)],
+      [t('CEA') + ' · ' + t('la 1re année'), T(calc.investissementCea)], [],
+      [G(t('Impôt annuel')), G('')],
+      [t('Impôt total avant investissement'), T(sim.impotAvant)],
+      [t('Impôt total après investissement'), T(sim.impotApres)],
+      [t('Économie d\'impôt'), { f: 'B13-B14', v: Math.round(sim.economie * 1000) / 1000, s: 'tndGras' }],
+      [t('Taux de réduction d\'impôt'), P(sim.tauxReduction)],
+      [t('Montant optimal en assurance vie'), T(sim.optimal)]];
+    if (calc.actif) syn.push([], [G(t('Projection du capital')), G('')], [t('Durée'), t('{0} ans', [e.dureeAns])], [t('Capital au terme (scénario médian)'), T(calc.med.capitalFinal)], [t('Valeur totale (capital + économie d\'impôt)'), T(calc.valeurTotale)], [t('Rendement annuel effectif, économie d\'impôt comprise'), P(calc.effectif)]);
+    syn.push([], [t('Simulation indicative, non contractuelle.')]);
+    feuilles.push({ nom: t('Synthèse'), lignes: syn, largeurs: [52, 30] });
+    var tr = [[G(t('Tranche (TND)')), G(t('Taux')), G(t('Impôt sans inv.')), G(t('Impôt avec inv.')), G(t('Économie'))]];
+    sim.avant.parTranche.forEach(function (bd, i) {
+      var ad = sim.apres.parTranche[i] || { impot: 0 }, r = tr.length + 1;
+      tr.push([fmtEntier(bd.min > 0 ? bd.min + 1 : 0) + (bd.max === Infinity ? ' ' + t('et plus') : ' – ' + fmtEntier(bd.max)), { v: bd.taux, s: 'pct' }, T(bd.impot), T(ad.impot), { f: 'C' + r + '-D' + r, v: Math.round((bd.impot - ad.impot) * 1000) / 1000, s: 'tnd' }]);
+    });
+    var n = tr.length;
+    tr.push([G(t('Total')), '', { f: 'SUM(C2:C' + n + ')', s: 'tndGras' }, { f: 'SUM(D2:D' + n + ')', s: 'tndGras' }, { f: 'SUM(E2:E' + n + ')', s: 'tndGras' }]);
+    feuilles.push({ nom: t('Impôt par tranche'), lignes: tr, largeurs: [26, 10, 20, 20, 18], figer: 1 });
+    if (calc.actif) {
+      var pr = [[G(t('Année')), G(t('Total versé')), G(t('Prudent')), G(t('Médian')), G(t('Dynamique')), G(t('Gain financier')), G(t('Capital en dinars constants'))]];
+      calc.med.annees.forEach(function (a, i) {
+        var r = i + 2;
+        pr.push([a.annee, T(a.verse), T(calc.sc.prudent.annees[i].capital), T(a.capital), T(calc.sc.dynamique.annees[i].capital), { f: 'D' + r + '-B' + r, v: Math.round((a.capital - a.verse) * 1000) / 1000, s: 'tnd' }, T(a.capitalReel)]);
+      });
+      feuilles.push({ nom: t('Projection'), lignes: pr, largeurs: [8, 18, 18, 18, 18, 18, 24], figer: 1 });
+    }
+    if (ui.mc) {
+      var mc = [[G(t('Année')), G('P10'), G('P25'), G(t('Médiane')), G('P75'), G('P90')]];
+      ui.mc.annees.forEach(function (a, i) { mc.push([a, T(ui.mc.centiles.p10[i]), T(ui.mc.centiles.p25[i]), T(ui.mc.centiles.p50[i]), T(ui.mc.centiles.p75[i]), T(ui.mc.centiles.p90[i])]); });
+      feuilles.push({ nom: t('Projection probabiliste'), lignes: mc, largeurs: [8, 18, 18, 18, 18, 18], figer: 1 });
+    }
+    if (ui.strategie) {
+      var st = [[G(t('Année')), G(t('Budget')), G(t('Assurance vie')), G(t('CEA')), G(t('Économie d\'impôt'))]];
+      ui.strategie.plan.forEach(function (l) { st.push([l.annee, T(l.budget), T(l.av), T(l.cea), T(l.economie)]); });
+      feuilles.push({ nom: t('Stratégie optimale'), lignes: st, largeurs: [8, 18, 18, 18, 18], figer: 1 });
+    }
+    if (ui.scenarios.length) {
+      var ms = ui.scenarios.map(function (x) { return Comp.mesurer(x.etat); });
+      var sc = [[G(t('Critère'))].concat(ui.scenarios.map(function (x) { return G(nomScenario(x)); }))];
+      [[t('Économie d\'impôt par an'), 'economie'], [t('Impôt total après investissement'), 'impotApres'], [t('Effort d\'épargne réel par mois'), 'effortMensuel'], [t('Capital au terme (médian)'), 'capital'], [t('Valeur totale au terme'), 'valeur']].forEach(function (lg) {
+        sc.push([lg[0]].concat(ms.map(function (m) { return m[lg[1]] == null ? '—' : T(m[lg[1]]); })));
+      });
+      feuilles.push({ nom: t('Scénarios'), lignes: sc, largeurs: [36].concat(ms.map(function () { return 22; })), figer: 1 });
+    }
+    if (ui.planObjectifs && ui.objectifs.length) {
+      var ob = [[G(t('Projet')), G(t('Montant visé')), G(t('Dans')), G(t('Déjà épargné')), G(t('Par mois')), G(t('Financé'))]];
+      ui.planObjectifs.objectifs.forEach(function (o) { if (o.valide) ob.push([o.nom || '', T(o.montant), t('{0} ans', [o.ans]), T(o.deja), T(o.mensuel), P(o.couverture)]); });
+      feuilles.push({ nom: t('Objectifs de vie'), lignes: ob, largeurs: [28, 18, 10, 18, 18, 12], figer: 1 });
+    }
+    var octets = window.Xlsx.classeur(feuilles, { titre: t('Simulation d\'assurance vie et de CEA') });
+    telecharger('simulation-' + dateIso() + '.xlsx', new Blob([octets], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), '');
+    toast(t('Classeur Excel téléchargé.'));
+  }
+  $('export-xlsx').addEventListener('click', exporterXlsx);
+
+  /* ===================================================================
+     Import d'un relevé PDF : valeurs proposées, appliquées seulement si cochées
+     =================================================================== */
+  var CHAMPS_RELEVE = [
+    ['tauxServi', 'Taux servi', 'p-rendement', 'pct'], ['tauxGaranti', 'Taux garanti', 'p-garanti', 'pct'],
+    ['fraisGestion', 'Frais de gestion', 'p-frais', 'pct'], ['fraisVersement', 'Frais sur versement', 'p-frais-entree', 'pct'],
+    ['versement', 'Versement périodique', 'investment-amount-period', 'tnd'], ['capital', 'Capital acquis (information)', null, 'tnd']
+  ];
+  function ouvrirDialogue(d) { if (typeof d.showModal === 'function') { if (!d.open) d.showModal(); } else d.setAttribute('open', ''); }
+  $('import-releve').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    $('releve-fichier').textContent = f.name;
+    $('releve-liste').innerHTML = '';
+    $('releve-msg').textContent = t('Lecture du document…');
+    $('releve-appliquer').disabled = true;
+    ouvrirDialogue($('releve'));
+    f.arrayBuffer().then(window.Releve.texte).then(function (texte) {
+      if (!texte) { $('releve-msg').textContent = t('Aucun texte lisible : le PDF est probablement une image scannée. Saisissez les valeurs à la main.'); return; }
+      var r = window.Releve.analyser(texte);
+      if (!r.trouves) { $('releve-msg').textContent = t('Aucune valeur reconnue dans ce document. Saisissez les valeurs à la main.'); return; }
+      $('releve-msg').textContent = t('{0} valeur(s) reconnue(s) :', [r.trouves]);
+      $('releve-liste').innerHTML = CHAMPS_RELEVE.filter(function (c) { return r[c[0]] != null; }).map(function (c) {
+        var v = r[c[0]], aff = c[3] === 'pct' ? fmtPct(v) : fmtTND(v);
+        return c[2] ? '<label class="case releve-ligne"><input type="checkbox" checked data-champ="' + c[2] + '" data-valeur="' + v + '"><span>' + echapper(t(c[1])) + '</span><b>' + aff + '</b></label>'
+          : '<div class="releve-ligne info"><span>' + echapper(t(c[1])) + '</span><b>' + aff + '</b></div>';
+      }).join('');
+      $('releve-appliquer').disabled = !$('releve-liste').querySelector('input');
+    }).catch(function (err) {
+      $('releve-msg').textContent = err && err.message === 'format' ? t('Ce fichier n\'est pas un PDF.') : t('Lecture impossible dans ce navigateur. Saisissez les valeurs à la main.');
+    });
+  });
+  $('releve-fermer').addEventListener('click', function () { $('releve').close(); });
+  $('releve-appliquer').addEventListener('click', function () {
+    var n = 0;
+    Array.prototype.forEach.call($('releve-liste').querySelectorAll('input:checked'), function (c) {
+      $(c.dataset.champ).value = fmtLibre(+c.dataset.valeur);
+      n++;
+    });
+    $('releve').close();
+    if (!n) return;
+    synchroniserSupport();
+    calculateAndDisplay();
+    toast(t('{0} valeur(s) appliquée(s) depuis le relevé.', [n]));
+  });
+
+  /* ===================================================================
+     Rappels de versement : notification locale (aucun serveur)
+     =================================================================== */
+  var CLE_CACHE_RAPPEL = 'reglages/rappel';
+  function lireRappel() {
+    var local = lireLocal('rappel', null);
+    if (!('caches' in window)) return Promise.resolve(local);
+    return caches.open('simulateur-reglages').then(function (c) { return c.match(CLE_CACHE_RAPPEL); })
+      .then(function (r) { return r ? r.json() : null; })
+      .then(function (c) { return c && local ? Object.assign(local, { dernier: Math.max(local.dernier || 0, c.dernier || 0) }) : (local || c); })
+      .catch(function () { return local; });
+  }
+  function ecrireRappel(r) {
+    ecrireLocal('rappel', r);
+    if ('caches' in window) caches.open('simulateur-reglages').then(function (c) { return c.put(CLE_CACHE_RAPPEL, new Response(JSON.stringify(r), { headers: { 'Content-Type': 'application/json' } })); }).catch(function () {});
+  }
+  function textesRappel(calc) {
+    var e = calc ? calc.etat : null;
+    var parts = [];
+    if (e && e.versement > 0) parts.push(t('assurance vie {0}', [fmtTND(e.versement)]));
+    if (e && e.versementCea > 0) parts.push(t('CEA {0}', [fmtTND(e.versementCea)]));
+    return { titre: t('Versement d\'épargne du jour'), corps: parts.length ? t('Pensez à votre versement : {0}.', [parts.join(' · ')]) : t('Pensez à votre versement d\'épargne.') };
+  }
+  function notifier(titre, corps) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return Promise.resolve(false);
+    var opts = { body: corps, icon: 'assets/icon-192.png', badge: 'assets/icon-192.png', tag: 'rappel-versement' };
+    var viaSw = navigator.serviceWorker && navigator.serviceWorker.getRegistration ? navigator.serviceWorker.getRegistration() : Promise.resolve(null);
+    return viaSw.then(function (reg) {
+      if (reg && reg.showNotification) return reg.showNotification(titre, opts).then(function () { return true; });
+      new Notification(titre, opts);
+      return true;
+    }).catch(function () { return false; });
+  }
+  function majInfoRappel(r) {
+    var p = window.Rappels.prochaine(r, new Date());
+    $('rp-info').textContent = r.actif && p ? t('Prochain rappel le {0}.', [p.toLocaleDateString(I18n.locale(), { weekday: 'long', day: 'numeric', month: 'long' })]) :
+      t('Le rappel s\'affiche à l\'ouverture de l\'application le jour du versement, et en arrière-plan quand le navigateur le permet (application installée).');
+  }
+  function ouvrirRappels() {
+    lireRappel().then(function (r) {
+      r = r || { actif: false, jour: new Date().getDate() > 28 ? 31 : new Date().getDate() };
+      var s = $('rp-jour');
+      s.innerHTML = Array.apply(null, Array(28)).map(function (x, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '<option value="31">' + echapper(t('Dernier jour du mois')) + '</option>';
+      s.value = String(r.jour);
+      $('rp-actif').checked = !!r.actif;
+      $('rp-err').textContent = '';
+      majInfoRappel(r);
+      ouvrirDialogue($('rappels'));
+    });
+  }
+  function enregistrerRappel() {
+    var actif = $('rp-actif').checked;
+    var r = { actif: actif, jour: +$('rp-jour').value, frequence: ui.frequence, depart: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString(), dernier: window.Rappels.cle(new Date()) };
+    Object.assign(r, textesRappel(ui.calc));
+    ecrireRappel(r);
+    majInfoRappel(r);
+    if (actif && navigator.serviceWorker) {
+      navigator.serviceWorker.ready.then(function (reg) {
+        if (reg.periodicSync) return reg.periodicSync.register('rappel-versement', { minInterval: 12 * 3600 * 1000 });
+      }).catch(function () {});
+    }
+  }
+  $('rp-actif').addEventListener('change', function () {
+    var cb = this;
+    $('rp-err').textContent = '';
+    if (!cb.checked) { enregistrerRappel(); return; }
+    if (!('Notification' in window)) { cb.checked = false; $('rp-err').textContent = t('Les notifications ne sont pas disponibles dans ce navigateur : utilisez « Ajouter à l\'agenda ».'); return; }
+    Promise.resolve(Notification.permission === 'default' ? Notification.requestPermission() : Notification.permission).then(function (p) {
+      if (p !== 'granted') { cb.checked = false; $('rp-err').textContent = t('Notifications refusées : autorisez-les dans les réglages du navigateur, ou utilisez « Ajouter à l\'agenda ».'); return; }
+      enregistrerRappel();
+      toast(t('Rappels activés.'));
+    });
+  });
+  $('rp-jour').addEventListener('change', enregistrerRappel);
+  $('rp-essai').addEventListener('click', function () {
+    var x = textesRappel(ui.calc);
+    notifier(x.titre, x.corps).then(function (ok) { if (!ok) $('rp-err').textContent = t('Activez d\'abord les rappels pour autoriser les notifications.'); });
+  });
+  $('rp-fermer').addEventListener('click', function () { $('rappels').close(); });
+  $('ouvrir-rappels').addEventListener('click', ouvrirRappels);
+  function verifierRappel() {
+    lireRappel().then(function (r) {
+      if (!r || !r.actif) return;
+      var d = window.Rappels.estDu(r, new Date());
+      if (!d) return;
+      r.dernier = d.cle;
+      Object.assign(r, textesRappel(ui.calc));
+      ecrireRappel(r);
+      notifier(r.titre, r.corps);
+      toast(r.corps);
+    });
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) verifierRappel(); });
+  setInterval(verifierRappel, 30 * 60 * 1000);
+
+  /* ===================================================================
+     Palette de commandes (Ctrl K) : actions, rubriques et saisies directes
+     =================================================================== */
+  var palette = { resultats: [], actif: 0, retour: null };
+  function actionsPalette() {
+    function clic(id) { return function () { $(id).click(); }; }
+    return [
+      { lib: t('Télécharger le rapport PDF'), ico: 'i-download', mots: 'rapport export imprimer', fn: exporterPdf },
+      { lib: t('Proposition commerciale (PDF)'), ico: 'i-signature', mots: 'signature contrat', fn: clic('proposition') },
+      { lib: t('Présenter au client'), ico: 'i-play', mots: 'diapositives plein écran', fn: ouvrirPresentation },
+      { lib: t('Simulation guidée'), ico: 'i-guide', mots: 'assistant étapes', fn: ouvrirGuide },
+      { lib: t('Reçu fiscal à partager'), ico: 'i-ticket', mots: 'image linkedin whatsapp', fn: ouvrirRecu },
+      { lib: t('Classeur Excel'), ico: 'i-table', mots: 'xlsx tableur export', fn: exporterXlsx },
+      { lib: t('Importer un relevé PDF'), ico: 'i-fichier', mots: 'contrat document', fn: clic('import-releve') },
+      { lib: t('Ajouter à l\'agenda'), ico: 'i-agenda', mots: 'calendrier ics', fn: clic('agenda') },
+      { lib: t('Rappels de versement'), ico: 'i-cloche', mots: 'notification', fn: ouvrirRappels },
+      { lib: t('Partager la simulation'), ico: 'i-share', mots: 'lien whatsapp qr', fn: clic('partager') },
+      { lib: t('Enregistrer'), ico: 'i-save', mots: 'portefeuille sauvegarder', fn: enregistrer },
+      { lib: t('Ajouter la simulation actuelle'), ico: 'i-comparer', mots: 'comparer scenarios', fn: clic('scn-ajouter') },
+      { lib: t('Annuler la dernière modification'), ico: 'i-annuler', mots: 'ctrl z retour', fn: function () { naviguerHist(-1); } },
+      { lib: t('Rétablir la modification'), ico: 'i-retablir', mots: 'ctrl y', fn: function () { naviguerHist(1); } },
+      { lib: t('Nouvelle simulation'), ico: 'i-plus', mots: 'effacer vider reinitialiser', fn: function () { appliquerEtat(Scenario.defauts()); $('revenue').focus(); } },
+      { lib: t('Thème') + ' : ' + t('Clair'), ico: 'i-sun', mots: 'light jour', fn: function () { appliquerTheme('light', true); } },
+      { lib: t('Thème') + ' : ' + t('Sombre'), ico: 'i-moon', mots: 'dark nuit', fn: function () { appliquerTheme('dark', true); } },
+      { lib: t('Thème') + ' : ' + t('Auto'), ico: 'i-auto', mots: 'systeme', fn: function () { appliquerTheme('auto', true); } },
+      { lib: 'Français', ico: 'i-globe', mots: 'langue french', fn: function () { appliquerLangue('fr'); } },
+      { lib: 'English', ico: 'i-globe', mots: 'langue anglais', fn: function () { appliquerLangue('en'); } },
+      { lib: 'العربية', ico: 'i-globe', mots: 'langue arabe arabic', fn: function () { appliquerLangue('ar'); } },
+      { lib: t('Mode simple'), ico: 'i-boussole', mots: 'expert', fn: clic('mode-simple') },
+      { lib: t('Mode conseiller'), ico: 'i-users', mots: 'client agence', fn: clic('mode-conseiller') },
+      { lib: t('Verrouiller la saisie'), ico: 'i-cadenas', mots: 'bloquer', fn: clic('verrou') },
+      { lib: t('Installer l\'application'), ico: 'i-phone', mots: 'pwa telephone', fn: ouvrirFenetreInstallation },
+      { lib: t('Haut de page'), ico: 'i-haut', mots: 'debut', fn: function () { window.scrollTo({ top: 0, behavior: mouvementReduit.matches ? 'auto' : 'smooth' }); } }
+    ];
+  }
+  var CHAMPS_DIRECTS = {
+    revenu: ['Revenu brut annuel imposable', 'revenue', 'i-cash'], versement: ['Versement assurance vie', 'investment-amount-period', 'i-coins'],
+    versementCea: ['Versement CEA', 'cea-period', 'i-chart'], duree: ['Durée', 'p-duree', 'i-calendar'], enfants: ['Enfants à charge', 'children', 'i-baby']
+  };
+  function resultatsPalette(q) {
+    var res = [];
+    window.Commandes.interpreter(q).forEach(function (s) {
+      var c = CHAMPS_DIRECTS[s.champ];
+      var v = s.champ === 'duree' ? t('{0} ans', [s.valeur]) : s.champ === 'enfants' ? String(s.valeur) : fmtTND(s.valeur) + (s.champ === 'versement' || s.champ === 'versementCea' ? ' ' + t(PERIODES[ui.frequence]) : '');
+      res.push({ groupe: t('Saisie directe'), lib: t(c[0]) + ' : ' + v, ico: c[2], fn: function () {
+        var el = $(c[1]);
+        el.value = s.champ === 'duree' || s.champ === 'enfants' ? String(s.valeur) : fmtLibre(s.valeur);
+        if (s.champ === 'duree' && $('p-retraite').checked) $('p-retraite').checked = false;
+        if (s.champ === 'revenu') majCurseur();
+        majSteppers();
+        calculateAndDisplay();
+        toast(t('Valeur appliquée : {0}.', [t(c[0]) + ' ' + v]));
+      } });
+    });
+    var actions = actionsPalette().map(function (a) { return { groupe: t('Actions'), lib: a.lib, ico: a.ico, motsCles: a.mots, fn: a.fn, libelle: a.lib }; });
+    var rubriques = nav.items.filter(function (it) { return it.etat !== 'absente'; }).map(function (it) {
+      return { groupe: t('Rubriques'), lib: it.lib, libelle: it.lib, ico: it.btn.querySelector('use').getAttribute('href').slice(1), fn: function () { allerRubrique(it); } };
+    });
+    var trouves = q.trim() ? window.Commandes.chercher(rubriques.concat(actions), q) : rubriques.slice(0, 6).concat(actions.slice(0, 8));
+    return res.concat(trouves.slice(0, 14));
+  }
+  function rendrePalette() {
+    var q = $('pl-champ').value;
+    var r = palette.resultats = resultatsPalette(q);
+    palette.actif = Math.min(palette.actif, Math.max(0, r.length - 1));
+    var html = '', groupe = null;
+    r.forEach(function (x, i) {
+      if (x.groupe !== groupe) { groupe = x.groupe; html += '<p class="pl-groupe" role="presentation">' + echapper(groupe) + '</p>'; }
+      html += '<div class="pl-option" role="option" id="pl-o-' + i + '" data-i="' + i + '" aria-selected="' + (i === palette.actif) + '"><span class="pl-ico" aria-hidden="true"><svg class="ico ico-sm"><use href="#' + x.ico + '"/></svg></span><span class="pl-lib">' + echapper(x.lib) + '</span>' + (i === palette.actif ? '<kbd class="kbd" aria-hidden="true">Entrée</kbd>' : '') + '</div>';
+    });
+    if (!r.length) html = '<p class="pl-vide">' + echapper(t('Aucun résultat. Essayez « pdf », « rachat », « 60000 » ou « av 500 ».')) + '</p>';
+    $('pl-liste').innerHTML = html;
+    $('pl-champ').setAttribute('aria-activedescendant', r.length ? 'pl-o-' + palette.actif : '');
+    var a = $('pl-o-' + palette.actif);
+    if (a) a.scrollIntoView({ block: 'nearest' });
+  }
+  function ouvrirPalette() {
+    if (ecranClient) return;
+    var d = $('palette');
+    palette.retour = document.activeElement;
+    $('pl-champ').value = '';
+    palette.actif = 0;
+    rendrePalette();
+    ouvrirDialogue(d);
+    $('pl-champ').focus();
+  }
+  function fermerPalette() {
+    var d = $('palette');
+    if (d.open) d.close();
+  }
+  function executerPalette(i) {
+    var x = palette.resultats[i];
+    if (!x) return;
+    fermerPalette();
+    setTimeout(x.fn, 0);
+  }
+  $('ouvrir-palette').addEventListener('click', ouvrirPalette);
+  $('palette').addEventListener('close', function () { if (palette.retour && palette.retour.focus && document.contains(palette.retour)) palette.retour.focus({ preventScroll: true }); });
+  $('palette').addEventListener('click', function (e) { if (e.target === this) fermerPalette(); });
+  $('pl-champ').addEventListener('input', function () { palette.actif = 0; rendrePalette(); });
+  $('pl-champ').addEventListener('keydown', function (e) {
+    var n = palette.resultats.length;
+    if (e.key === 'ArrowDown') { e.preventDefault(); if (n) { palette.actif = (palette.actif + 1) % n; rendrePalette(); } }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (n) { palette.actif = (palette.actif - 1 + n) % n; rendrePalette(); } }
+    else if (e.key === 'Enter') { e.preventDefault(); executerPalette(palette.actif); }
+  });
+  $('pl-liste').addEventListener('click', function (e) { var o = e.target.closest('[data-i]'); if (o) executerPalette(+o.dataset.i); });
+  $('pl-liste').addEventListener('pointermove', function (e) {
+    var o = e.target.closest('[data-i]');
+    if (o && +o.dataset.i !== palette.actif) { palette.actif = +o.dataset.i; rendrePalette(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if ($('palette').open) fermerPalette(); else if ($('presentation').hidden) ouvrirPalette();
+    }
+  });
+
+  /* Lien d'évitement : focus sur le contenu sans modifier l'adresse (la partie # porte la simulation) */
+  $('lien-evitement').addEventListener('click', function (e) {
+    e.preventDefault();
+    var c = $('contenu');
+    c.focus({ preventScroll: true });
+    c.scrollIntoView({ behavior: mouvementReduit.matches ? 'auto' : 'smooth', block: 'start' });
+  });
 
   /* Raccourcis de l'application installée (manifest) : ?guide=1, ?portefeuille=1, ?nouveau=1 */
   function lancerRaccourci() {
@@ -2633,7 +3621,11 @@
   appliquerModeSimple(simple === '1');
   appliquerLangue(langue, true);
   chargerDepuisLien();
-  lancerRaccourci();
+  if (ecranClient) demarrerEcranClient();
+  else lancerRaccourci();
+  hist.ajouter(lireEtat());
+  majBoutonsHist();
+  setTimeout(verifierRappel, 2500);
 
   Port.ouvrir().then(function (d) { depot = d; return rafraichirPortefeuille(); }).catch(function () {
     $('port-vide').textContent = t('Le portefeuille n\'est pas disponible dans ce navigateur (stockage local désactivé).');

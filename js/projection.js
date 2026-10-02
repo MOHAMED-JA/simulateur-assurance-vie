@@ -19,7 +19,8 @@
            versementInitial (versé au début de la 1re année), fraisEntreePct (frais prélevés sur chaque versement),
            versementsLibres ({ année: montant }, versés en fin d'année),
            retraitDebut, retraitMontant (retrait annuel en fin d'année à partir de l'année retraitDebut, borné au capital),
-           rendementsAnnuels (facultatif : rendement de chaque année, en %, à la place de rendementPct) } */
+           rendementsAnnuels (facultatif : rendement de chaque année, en %, à la place de rendementPct),
+           facteursVersement (facultatif : part des versements périodiques effectués chaque année, 0 = pause) } */
   function projeter(p) {
     var tp = tauxPeriode(p.rendementPct - (p.fraisPct || 0), p.periodesParAn);
     var croissance = 1 + (p.croissancePct || 0) / 100;
@@ -31,7 +32,7 @@
     var annees = [{ annee: 0, verse: initial, capital: capital, capitalReel: capital, retire: 0 }];
     var flux = [];
     for (var a = 1; a <= p.dureeAns; a++) {
-      var versement = p.versement * Math.pow(croissance, a - 1);
+      var versement = p.versement * Math.pow(croissance, a - 1) * (p.facteursVersement && p.facteursVersement[a - 1] != null ? p.facteursVersement[a - 1] : 1);
       var economie = p.economies && p.economies[a - 1] != null ? p.economies[a - 1] : (p.economieAnnuelle || 0);
       /* Rendement propre à l'année (simulation Monte-Carlo), sinon rendement constant */
       var tpa = p.rendementsAnnuels ? tauxPeriode(p.rendementsAnnuels[a - 1] - (p.fraisPct || 0), p.periodesParAn) : tp;
