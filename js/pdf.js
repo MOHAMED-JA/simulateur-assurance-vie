@@ -63,15 +63,8 @@
     function logo(x, yy, taille) {
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(x, yy, taille, taille, 3, 3, 'F');
-      var k = taille / 16;
-      couleur('setDrawColor', C.indigo);
-      doc.setLineWidth(1.1 * k);
-      doc.setLineJoin('round');
-      doc.setLineCap('round');
-      /* Bouclier (repère 16 × 16) puis coche */
-      doc.lines([[5 * k, -2 * k], [5 * k, 2 * k], [0, 4 * k], [-5 * k, 6 * k], [-5 * k, -6 * k]], x + 3 * k, yy + 4 * k, [1, 1], 'S', true);
-      couleur('setDrawColor', C.vert);
-      doc.lines([[1.6 * k, 1.6 * k], [3 * k, -3.2 * k]], x + 5.8 * k, yy + 8 * k, [1, 1], 'S', false);
+      doc.setLineWidth(1.1 * taille / 16);
+      dessinerPousse(doc, x + taille / 2, yy + taille / 2, taille * 0.04, C.indigo, C.vert);
     }
 
     /* Logo de l'agence, centré dans un carré blanc arrondi */
@@ -609,6 +602,20 @@
     return doc.output('blob');
   }
 
+  /* Logo de l'application : pousse (tracé repris de l'icône, repère 24 × 24), tige en indigo, feuilles en vert.
+     (cx, cy) reçoit le centre du dessin, k est l'échelle en mm par unité. */
+  function dessinerPousse(doc, cx, cy, k, tige, feuille) {
+    function P(x, y) { return [cx + (x - 11.6) * k, cy + (y - 12.5) * k]; }
+    doc.setLineJoin('round');
+    doc.setLineCap('round');
+    doc.setDrawColor(tige[0], tige[1], tige[2]);
+    var a = P(7, 20); doc.lines([[10, 0]], a[0], a[1], [k, k], 'S', false);
+    a = P(10, 20); doc.lines([[5.5, -2.5, 0.8, -6.4, 3, -10]], a[0], a[1], [k, k], 'S', false);
+    doc.setDrawColor(feuille[0], feuille[1], feuille[2]);
+    a = P(9.5, 9.4); doc.lines([[1.1, 0.8, 1.8, 2.2, 2.3, 3.7], [-2, 0.4, -3.5, 0.4, -4.8, -0.3], [-1.2, -0.6, -2.3, -1.9, -3, -4.2], [2.8, -0.5, 4.4, 0, 5.5, 0.8]], a[0], a[1], [k, k], 'S', true);
+    a = P(14.1, 6); doc.lines([[-0.7, 1.2, -1.1, 2.6, -1.1, 4], [1.9, -0.1, 3.3, -0.6, 4.3, -1.4], [1, -1, 1.6, -2.3, 1.7, -4.6], [-2.7, 0.1, -4, 1, -4.9, 2]], a[0], a[1], [k, k], 'S', true);
+  }
+
   /* Affiche A4 à imprimer : QR code qui ouvre l'application sur sa fenêtre d'installation.
      d = { t, lien, qr (matrice), agence } */
   function affiche(d) {
@@ -628,11 +635,8 @@
     /* Logo */
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(W / 2 - 13, 12, 26, 26, 6, 6, 'F');
-    var k = 26 / 16, x0 = W / 2 - 13, y0 = 12;
-    couleur('setDrawColor', C.indigo); doc.setLineWidth(1.6); doc.setLineJoin('round'); doc.setLineCap('round');
-    doc.lines([[5 * k, -2 * k], [5 * k, 2 * k], [0, 4 * k], [-5 * k, 6 * k], [-5 * k, -6 * k]], x0 + 3 * k, y0 + 4 * k, [1, 1], 'S', true);
-    couleur('setDrawColor', C.vert);
-    doc.lines([[1.6 * k, 1.6 * k], [3 * k, -3.2 * k]], x0 + 5.8 * k, y0 + 8 * k, [1, 1], 'S', false);
+    doc.setLineWidth(1.6);
+    dessinerPousse(doc, W / 2, 25, 26 * 0.04, C.indigo, C.vert);
     police(24, true, [255, 255, 255]);
     doc.text(txt(t('Simulateur Assurance Vie & CEA')), W / 2, 52, { align: 'center' });
     police(12.5, false, [255, 255, 255]);
