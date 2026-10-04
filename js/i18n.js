@@ -31,6 +31,14 @@
     'Elle ne constitue ni un conseil en investissement ni un engagement de l\'assureur. Les rendements et les frais de la projection sont des hypothèses modifiables, non garanties : la valeur d\'un contrat peut varier à la hausse comme à la baisse. Le calcul de l\'impôt suit le Code de l\'impôt sur le revenu des personnes physiques et de l\'impôt sur les sociétés tel que saisi dans le simulateur ; seules les dispositions officielles en vigueur font foi.': ['It is neither investment advice nor a commitment by the insurer. Projection returns and fees are adjustable, non-guaranteed assumptions: the value of a contract may go up as well as down. The tax calculation follows the Tunisian Personal Income Tax and Corporate Tax Code as entered in the simulator; only the official provisions in force are authoritative.', 'لا تمثل نصيحة استثمارية ولا التزامًا من المؤمِّن. العوائد والمصاريف في الإسقاط فرضيات قابلة للتعديل وغير مضمونة: قد ترتفع قيمة العقد أو تنخفض. يتبع احتساب الضريبة مجلة الضريبة على دخل الأشخاص الطبيعيين والضريبة على الشركات كما أُدخلت في المحاكي؛ ولا يُعتدّ إلا بالنصوص الرسمية السارية.'],
     'Simulation indicative, sans valeur contractuelle : les montants sont calculés au millime selon le barème progressif.': ['Indicative simulation with no contractual value: amounts are calculated to the millime using the progressive scale.', 'محاكاة تقديرية دون قيمة تعاقدية: تُحتسب المبالغ بالمليم وفق الجدول التصاعدي.'],
 
+    /* ---------- Les autres simulateurs ---------- */
+    'Les autres simulateurs': ['Other simulators', 'المحاكيات الأخرى'],
+    'Du même auteur · gratuits et installables': ['By the same author · free and installable', 'من نفس المؤلف · مجانية وقابلة للتثبيت'],
+    'Simulateur de crédit': ['Loan simulator', 'محاكي القروض'],
+    'Mensualité, TEG et tableau d\'amortissement, en dinars tunisiens.': ['Monthly payment, APR and amortisation schedule, in Tunisian dinars.', 'القسط الشهري، النسبة الفعلية الإجمالية وجدول الاستهلاك، بالدينار التونسي.'],
+    'Simulateur Assurance Automobile': ['Car Insurance Simulator', 'محاكي تأمين السيارات'],
+    'Prime détaillée par garantie, offre imprimable et constat amiable.': ['Premium itemised by cover, printable quote and accident report.', 'قسط مفصّل حسب كل ضمان، عرض قابل للطباعة ومعاينة ودية.'],
+
     /* ---------- Mode conseiller ---------- */
     'Références inscrites sur le rapport PDF': ['References printed on the PDF report', 'مراجع تظهر في تقرير PDF'],
     'Nom du client': ['Client name', 'اسم الحريف'],
