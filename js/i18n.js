@@ -39,6 +39,13 @@
     'Simulateur Assurance Automobile': ['Car Insurance Simulator', 'محاكي تأمين السيارات'],
     'Prime détaillée par garantie, offre imprimable et constat amiable.': ['Premium itemised by cover, printable quote and accident report.', 'قسط مفصّل حسب كل ضمان، عرض قابل للطباعة ومعاينة ودية.'],
     'Calculateur de salaire brut ⇄ net': ['Gross ⇄ Net Salary Calculator', 'حاسبة الأجر الخام ⇄ الصافي'],
+    /* ---------- Signature commune ---------- */
+    'Application développée par': ['App developed by', 'تطبيق من تطوير'],
+    'Application développée par Mohamed Aziz Jaouadi : profil LinkedIn (nouvel onglet)': ['App developed by Mohamed Aziz Jaouadi: LinkedIn profile (new tab)', 'تطبيق من تطوير محمد عزيز الجوادي: الملف الشخصي على لينكدإن (علامة تبويب جديدة)'],
+    'Simulateurs du même auteur': ['Simulators by the same author', 'محاكيات من نفس المؤلف'],
+    'Crédit': ['Loan', 'القروض'],
+    'Assurance auto': ['Car insurance', 'تأمين السيارات'],
+    'Salaire brut ⇄ net': ['Gross ⇄ net salary', 'الأجر الخام ⇄ الصافي'],
     'CNSS ou CNRPS, IRPP et CSS : du brut au net et inversement.': ['CNSS or CNRPS, income tax and CSS: from gross to net and back.', 'الصندوق الوطني للضمان الاجتماعي أو الصندوق الوطني للتقاعد والحيطة الاجتماعية، الضريبة على الدخل والمساهمة الاجتماعية التضامنية: من الخام إلى الصافي والعكس.'],
 
     /* ---------- Mode conseiller ---------- */
