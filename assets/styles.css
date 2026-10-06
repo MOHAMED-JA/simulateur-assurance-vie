@@ -1395,6 +1395,9 @@ table.scenarios td.meilleur { color: var(--good); font-weight: 800; background: 
 .xsim--credit { --c1: #a855f7; --c2: #ec4899; }
 .xsim--vie { --c1: #6366f1; --c2: #c026d3; }
 .xsim--auto { --c1: #3b82f6; --c2: #22d3ee; }
+.xsim--salaire { --c1: #14b8a6; --c2: #3b82f6; }
+/* Nombre impair de cartes : la dernière occupe toute la largeur */
+@media (min-width: 761px) { .xsim-grille > .xsim-carte:last-child:nth-child(odd) { grid-column: 1 / -1; } }
 @media (hover: hover) and (pointer: fine) {
   .xsim-carte:hover { transform: translateY(-4px); background: linear-gradient(150deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .04)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 26px 44px -24px var(--c1); }
   .xsim-carte:hover::before { opacity: 1; }
@@ -1415,3 +1418,33 @@ table.scenarios td.meilleur { color: var(--good); font-weight: 800; background: 
 }
 @media (prefers-reduced-motion: reduce) { .xsim::after, .xsim-orbe, .xsim-sur::before { animation: none; } .xsim-carte, .xsim-carte::after, .xsim-logo, .xsim-fleche, .xsim-halo { transition: none; } }
 @media print { .xsim { display: none !important; } }
+
+/* ---- Signature commune aux simulateurs de Mohamed Aziz Jaouadi (bloc identique dans les quatre applications) ---- */
+.mj-sig { box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px;
+  width: 100%; margin: 16px 0 0; padding: 12px 14px; border-radius: 18px; border: 1px solid rgba(255, 255, 255, .1);
+  background: linear-gradient(120deg, #0b1024, #111a3a 60%, #0b1024); color: #e8ecff; font-size: 14px; line-height: 1.4; text-align: start; }
+.mj-sig *, .mj-sig *::before { box-sizing: border-box; }
+.mj-sig__auteur { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; padding: 4px 10px 4px 4px; border-radius: 14px;
+  color: inherit; text-decoration: none; transition: background-color .2s ease; }
+.mj-sig__mono { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; color: #fff;
+  font-size: 14px; font-weight: 800; letter-spacing: .02em; background: linear-gradient(135deg, #14b8a6, #6366f1 55%, #c026d3);
+  box-shadow: 0 6px 14px -8px rgba(0, 0, 0, .5); }
+.mj-sig__txt { display: grid; gap: 1px; min-width: 0; }
+.mj-sig__lab { font-size: 12px; font-weight: 500; color: #b4bde0; }
+.mj-sig__nom { font-size: 15px; font-weight: 700; color: #fff; white-space: nowrap; }
+.mj-sig__in { width: 20px; height: 20px; flex: none; color: #8ab8ff; }
+.mj-sig__nav { min-width: 0; }
+.mj-sig__apps { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.mj-sig__app { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .16); color: #dfe5ff; font-size: 13px; font-weight: 600; text-decoration: none;
+  transition: border-color .2s ease, background-color .2s ease; }
+.mj-sig__app::before { content: ""; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--mj-c, #94a3b8); }
+.mj-sig__app[aria-current="page"] { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .34); color: #fff; }
+.mj-sig a:focus-visible { outline: 2px solid #a5b4fc; outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .mj-sig__auteur:hover { background: rgba(255, 255, 255, .06); }
+  .mj-sig__app:hover { border-color: var(--mj-c, #94a3b8); background: rgba(255, 255, 255, .06); }
+}
+@media (max-width: 600px) { .mj-sig { flex-direction: column; align-items: stretch; } .mj-sig__apps { justify-content: flex-start; } }
+@media (prefers-reduced-motion: reduce) { .mj-sig__auteur, .mj-sig__app { transition: none; } }
+@media print { .mj-sig { display: none !important; } }
