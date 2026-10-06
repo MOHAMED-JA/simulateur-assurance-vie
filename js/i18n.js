@@ -38,6 +38,8 @@
     'Mensualité, TEG et tableau d\'amortissement, en dinars tunisiens.': ['Monthly payment, APR and amortisation schedule, in Tunisian dinars.', 'القسط الشهري، النسبة الفعلية الإجمالية وجدول الاستهلاك، بالدينار التونسي.'],
     'Simulateur Assurance Automobile': ['Car Insurance Simulator', 'محاكي تأمين السيارات'],
     'Prime détaillée par garantie, offre imprimable et constat amiable.': ['Premium itemised by cover, printable quote and accident report.', 'قسط مفصّل حسب كل ضمان، عرض قابل للطباعة ومعاينة ودية.'],
+    'Calculateur de salaire brut ⇄ net': ['Gross ⇄ Net Salary Calculator', 'حاسبة الأجر الخام ⇄ الصافي'],
+    'CNSS ou CNRPS, IRPP et CSS : du brut au net et inversement.': ['CNSS or CNRPS, income tax and CSS: from gross to net and back.', 'الصندوق الوطني للضمان الاجتماعي أو الصندوق الوطني للتقاعد والحيطة الاجتماعية، الضريبة على الدخل والمساهمة الاجتماعية التضامنية: من الخام إلى الصافي والعكس.'],
 
     /* ---------- Mode conseiller ---------- */
     'Références inscrites sur le rapport PDF': ['References printed on the PDF report', 'مراجع تظهر في تقرير PDF'],

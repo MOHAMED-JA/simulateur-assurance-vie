@@ -1395,6 +1395,9 @@ table.scenarios td.meilleur { color: var(--good); font-weight: 800; background: 
 .xsim--credit { --c1: #a855f7; --c2: #ec4899; }
 .xsim--vie { --c1: #6366f1; --c2: #c026d3; }
 .xsim--auto { --c1: #3b82f6; --c2: #22d3ee; }
+.xsim--salaire { --c1: #14b8a6; --c2: #3b82f6; }
+/* Nombre impair de cartes : la dernière occupe toute la largeur */
+@media (min-width: 761px) { .xsim-grille > .xsim-carte:last-child:nth-child(odd) { grid-column: 1 / -1; } }
 @media (hover: hover) and (pointer: fine) {
   .xsim-carte:hover { transform: translateY(-4px); background: linear-gradient(150deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .04)); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12), 0 26px 44px -24px var(--c1); }
   .xsim-carte:hover::before { opacity: 1; }
