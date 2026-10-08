@@ -2,12 +2,12 @@
    Stratégie « réseau d'abord » : en ligne, l'utilisateur reçoit toujours la dernière version publiée ;
    hors ligne (en agence sans réseau), la dernière version consultée est servie depuis le cache.
    Changer VERSION à chaque publication qui modifie la liste des fichiers. */
-var VERSION = 'simulateur-av-v12';
+var VERSION = 'simulateur-av-v13';
 var REGLAGES = 'simulateur-reglages'; /* réglages des rappels : jamais effacés à la mise à jour */
 try { importScripts('js/rappels.js'); } catch (e) {}
 var FICHIERS = [
   './', 'index.html', 'manifest.webmanifest',
-  'assets/styles.css', 'assets/fonts.css', 'assets/fonts/Inter-1.woff2', 'assets/fonts/PlusJakartaSans-2.woff2',
+  'assets/styles.css', 'assets/espace-bande.css', 'assets/fonts.css', 'assets/fonts/Inter-1.woff2', 'assets/fonts/PlusJakartaSans-2.woff2',
   'assets/favicon.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/icon-maskable-512.png',
   'assets/vendor/jspdf.umd.min.js', 'assets/vendor/qrcode.js',
   'js/baremes.js', 'js/moteur-fiscal.js', 'js/saisie.js', 'js/projection.js', 'js/scenario.js', 'js/rachat.js',
