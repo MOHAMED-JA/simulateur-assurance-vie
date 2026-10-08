@@ -33,6 +33,10 @@
 
     /* ---------- Les autres simulateurs ---------- */
     'Les autres simulateurs': ['Other simulators', 'المحاكيات الأخرى'],
+    'Nouveau': ['New', 'جديد'],
+    'Enregistrez vos simulations dans votre espace personnel sécurisé.': ['Save your simulations in your secure personal space.', 'احفظ محاكاتك في فضائك الشخصي الآمن.'],
+    'Créer mon espace': ['Create my space', 'أنشئ فضائي'],
+    '(nouvel onglet)': ['(new tab)', '(علامة تبويب جديدة)'],
     'Du même auteur · gratuits et installables': ['By the same author · free and installable', 'من نفس المؤلف · مجانية وقابلة للتثبيت'],
     'Simulateur de crédit': ['Loan simulator', 'محاكي القروض'],
     'Mensualité, TEG et tableau d\'amortissement, en dinars tunisiens.': ['Monthly payment, APR and amortisation schedule, in Tunisian dinars.', 'القسط الشهري، النسبة الفعلية الإجمالية وجدول الاستهلاك، بالدينار التونسي.'],
