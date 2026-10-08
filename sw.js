@@ -2,7 +2,7 @@
    Stratégie « réseau d'abord » : en ligne, l'utilisateur reçoit toujours la dernière version publiée ;
    hors ligne (en agence sans réseau), la dernière version consultée est servie depuis le cache.
    Changer VERSION à chaque publication qui modifie la liste des fichiers. */
-var VERSION = 'simulateur-av-v11';
+var VERSION = 'simulateur-av-v12';
 var REGLAGES = 'simulateur-reglages'; /* réglages des rappels : jamais effacés à la mise à jour */
 try { importScripts('js/rappels.js'); } catch (e) {}
 var FICHIERS = [

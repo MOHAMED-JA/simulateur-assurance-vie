@@ -9,7 +9,7 @@ const Baremes = require('../js/baremes.js');
 const lire = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const decoder = (s) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 /* Textes qui restent identiques dans toutes les langues */
-const NEUTRES = new Set(['TND', 'PDF', 'Mohamed Aziz Jaouadi', 'MJ', 'Français', 'English', 'العربية']);
+const NEUTRES = new Set(['TND', 'PDF', 'Mohamed Aziz Jaouadi', 'MJ', 'Espace Finances TN', 'Français', 'English', 'العربية']);
 
 function clesJs(fichier) {
   const src = lire(fichier);
