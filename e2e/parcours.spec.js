@@ -519,6 +519,8 @@ test('rubriques : navigation, suivi, filtre et feuille mobile', async ({ page, i
     await expect(page.locator('#rb-pilule')).toBeVisible();
     await page.click('#rb-pilule');
     await expect(page.locator('#rubriques')).toHaveClass(/ouvert/);
+    /* La feuille glisse depuis le bas : cliquer seulement quand la rubrique est à l'écran. */
+    await expect(page.locator('.rb-item[data-cle="economie"]')).toBeInViewport();
     await page.click('.rb-item[data-cle="economie"]', { force: true });
     await expect(page.locator('#revenue')).toBeFocused();
   } else {
@@ -588,7 +590,8 @@ test.describe('fonctions avancées', () => {
   });
 
   test('historique : annuler et rétablir', async ({ page }) => {
-    await page.waitForTimeout(800);
+    /* L'état saisi (400) n'entre dans l'historique qu'après 700 ms de calme : « Annuler » actif le prouve. */
+    await expect(page.locator('#annuler')).toBeEnabled();
     await page.fill('#investment-amount-period', '900');
     await page.waitForTimeout(900);
     await expect(page.locator('#annuler')).toBeEnabled();
